@@ -4,9 +4,8 @@ import { signInWithPopup, signOut } from "firebase/auth";
 import axios from "axios";
 import "./App.css";
 
-// Load environment variables
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;  // Node.js API
-const FLASK_API = import.meta.env.VITE_FLASK_API;      // Flask API
+// Only need Flask API URL now
+const FLASK_API = import.meta.env.VITE_FLASK_API;
 
 function App() {
   const [user, setUser] = useState(null);
@@ -14,64 +13,148 @@ function App() {
   const [city, setCity] = useState("Cardiff, UK");
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Google Sign-in
+  // Google Sign-in
   const signIn = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
       setUser(result.user);
     } catch (error) {
-      console.error("Login failed", error);
+      console.error("❌ Login failed", error);
       alert("Login failed. Please try again.");
     }
   };
 
-  // 🔹 Logout function
+  // Logout function
   const logout = () => {
     signOut(auth)
       .then(() => {
         setUser(null);
         setSearchResults([]);
       })
-      .catch((error) => console.error("Logout failed", error));
+      .catch((error) => console.error("❌ Logout failed", error));
   };
 
-  // 🔹 Fetch amenities from Flask backend via Node.js
-  const fetchAmenities = async () => {
-    if (!user) {
-      alert("You need to be logged in to fetch data.");
-      return;
-    }
+  // Function to render a single amenity card
+  const renderAmenityCard = (item, category, index) => {
+    return (
+      <div key={`${category}-${index}-${item.name}`} className="amenity-card">
+        <h4>{item.name}</h4>
+        <div className="card-content">
+          {item.reason && <p className="reason">{item.reason}</p>}
+          <p className="coordinates">
+            <span>📍 Location:</span>
+            <br />
+            Lat: {item.lat.toFixed(4)}
+            <br />
+            Lon: {item.lon.toFixed(4)}
+          </p>
+          {item.distance && item.distance !== "Unknown" && (
+            <p className="distance">
+              <span>🚶 Distance:</span> {item.distance} miles
+            </p>
+          )}
+          {renderAdditionalInfo(item)}
+          <a 
+            href={item.google_maps_link} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="maps-link"
+          >
+            View on Google Maps 🗺️
+          </a>
+        </div>
+      </div>
+    );
+  };
 
+  // Function to render additional information
+  const renderAdditionalInfo = (item) => {
+    const skipFields = [
+      'name', 'type', 'distance', 'lat', 'lon', 
+      'reason', 'google_maps_link', 'category',
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'
+    ];
+
+    return Object.entries(item).map(([key, value]) => {
+      if (skipFields.includes(key) || 
+          !value || 
+          value === "" || 
+          value === " " || 
+          value === "\n" ||
+          value === "\"\"" ||
+          typeof value === "object") {
+        return null;
+      }
+
+      const formattedKey = key
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      return (
+        <p key={key} className="additional-info">
+          <span>{formattedKey}:</span> {value.toString()}
+        </p>
+      );
+    });
+  };
+
+  // Fetch amenities function
+  const fetchAmenities = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${FLASK_API}/api/amenities?city=${city}`);
-      setSearchResults(response.data);
+      console.log('🔍 Searching for:', city);
+      
+      const response = await axios.get(`${FLASK_API}/amenities`, {
+        params: { city },
+        headers: {
+          'Authorization': `Bearer ${user?.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        withCredentials: false
+      });
+      
+      console.log('📥 Raw response:', response.data);
+
+      // Extract locations from the response
+      const locationsData = response.data.locations || [];
+      console.log('📍 Found locations:', locationsData.length);
+
+      if (locationsData.length === 0) {
+        console.log('⚠️ No locations found');
+        setSearchResults([]);
+        return;
+      }
+
+      // Process the locations
+      const cleanedResults = locationsData.map(item => ({
+        name: item.name || "Unknown Location",
+        type: item.category || "Unknown Type",
+        lat: parseFloat(item.lat) || 0,
+        lon: parseFloat(item.lon) || 0,
+        reason: item.reason || "",
+        google_maps_link: item.google_maps_link,
+        ...item
+      }));
+
+      console.log('✨ Processed locations:', cleanedResults.length);
+
+      // Update results
+      setSearchResults(cleanedResults);
+
     } catch (error) {
-      console.error("Error fetching data:", error);
-      alert("Failed to fetch amenities. Make sure Flask & Node.js are running.");
+      console.log('❌ Error:', error.message);
+      setSearchResults([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Save search results to Firebase (via Node.js API)
-  const saveSearch = async () => {
-    if (!user) {
-      alert("Please log in first.");
-      return;
-    }
-
-    try {
-      await axios.post(`${BACKEND_URL}/api/save_search`, {
-        user: user.email,
-        search: city,
-      });
-      alert("Search saved successfully!");
-    } catch (error) {
-      console.error("Error saving search:", error);
-      alert("Failed to save search.");
-    }
-  };
+  // Add a useEffect to monitor searchResults changes
+  useEffect(() => {
+    console.log('🔄 Search results updated:', searchResults.length);
+    console.log('📋 Current results:', searchResults);
+  }, [searchResults]);
 
   return (
     <div className="container">
@@ -79,42 +162,50 @@ function App() {
 
       {user ? (
         <>
-          <p>Welcome, {user.displayName}!</p>
-          <button onClick={logout} className="btn">Logout</button>
+          <div className="welcome-section">
+            <p>Welcome, {user.displayName}!</p>
+            <button onClick={logout} className="btn">Logout</button>
+          </div>
 
           <div className="input-group">
             <input 
               type="text" 
               value={city} 
               onChange={(e) => setCity(e.target.value)} 
-              placeholder="Enter city..." 
+              placeholder="Enter a city name..." 
             />
-            <button onClick={fetchAmenities} className="btn">Fetch Amenities</button>
-            <button onClick={saveSearch} className="btn">Save Search</button>
+            <button onClick={fetchAmenities} className="btn">
+              {loading ? 'Searching...' : 'Fetch Amenities'}
+            </button>
           </div>
 
-          {loading ? <p>Loading...</p> : null}
-
-          <h2>Results:</h2>
-          <ul className="results-list">
-            {searchResults.length > 0 ? (
-              searchResults.map((item, index) => (
-                <li key={index}>
-                  <strong>{item.name}</strong> - {item.type} - {item.distance} miles away
-                  <br />
-                  <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    View on Google Maps
-                  </a>
-                </li>
+          <div className="results-container">
+            {loading && <div className="loading">Searching for amenities...</div>}
+            
+            {searchResults && searchResults.length > 0 && (
+              Object.entries(
+                searchResults.reduce((acc, item) => {
+                  const category = item.type || 'Other';
+                  if (!acc[category]) acc[category] = [];
+                  acc[category].push(item);
+                  return acc;
+                }, {})
+              ).map(([category, items]) => (
+                <div key={category} className="category-section">
+                  <h3>{category} ({items.length})</h3>
+                  <div className="card-grid">
+                    {items.map((item, index) => renderAmenityCard(item, category, index))}
+                  </div>
+                </div>
               ))
-            ) : (
-              <p>No results found. Try another city.</p>
             )}
-          </ul>
+            
+            {!loading && (!searchResults || searchResults.length === 0) && (
+              <div className="loading">
+                No results found for "{city}". Try another location or check your spelling.
+              </div>
+            )}
+          </div>
         </>
       ) : (
         <button onClick={signIn} className="btn">Sign in with Google</button>
