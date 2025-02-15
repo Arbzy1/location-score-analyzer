@@ -7,6 +7,8 @@ from shapely.geometry import Point, Polygon
 from shapely.ops import transform
 import pyproj
 from functools import wraps
+import math
+import requests
 
 app = Flask(__name__)
 
@@ -113,6 +115,7 @@ def analyze_location(city):
             "lat": pt.y,
             "lon": pt.x,
             "category": "Recommended Location",
+            "area_name": find_nearest_place(pt.y, pt.x),
             "amenities": {}
         }
         
@@ -160,6 +163,54 @@ def get_amenities():
     except Exception as e:
         print(f"Server Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+def haversine(coord1, coord2):
+    lat1, lon1 = coord1
+    lat2, lon2 = coord2
+    R = 6371000  # Earth radius in meters
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+def find_nearest_place(lat, lon, radius=3000):
+    overpass_url = "http://overpass-api.de/api/interpreter"
+    query = f"""
+    [out:json][timeout:10];
+    (
+      node["place"~"^(village|suburb|town|city|hamlet)$"](around:{radius},{lat},{lon});
+      way["place"~"^(village|suburb|town|city|hamlet)$"](around:{radius},{lat},{lon});
+      relation["place"~"^(village|suburb|town|city|hamlet)$"](around:{radius},{lat},{lon});
+    );
+    out center;
+    """
+    try:
+        response = requests.get(overpass_url, params={'data': query}, timeout=20)
+        if response.status_code == 200:
+            data = response.json()
+            elements = data.get("elements", [])
+            if not elements:
+                return "Unknown Area"
+            min_dist = None
+            nearest_name = None
+            for elem in elements:
+                if "lat" in elem and "lon" in elem:
+                    item_lat = elem["lat"]
+                    item_lon = elem["lon"]
+                elif "center" in elem:
+                    item_lat = elem["center"]["lat"]
+                    item_lon = elem["center"]["lon"]
+                else:
+                    continue
+                d = haversine((lat, lon), (item_lat, item_lon))
+                if min_dist is None or d < min_dist:
+                    min_dist = d
+                    nearest_name = elem.get("tags", {}).get("name", "Unknown Area")
+            return nearest_name if nearest_name else "Unknown Area"
+    except Exception as e:
+        print(f"Error finding nearest place: {e}")
+        return "Unknown Area"
 
 if __name__ == "__main__":
     print("Server: Starting Flask development server...")

@@ -38,7 +38,13 @@ function App() {
   const renderAmenityCard = (item, category, index) => {
     return (
       <div key={`${category}-${index}`} className="amenity-card">
-        <h4>Location {index + 1}</h4>
+        <div className="card-header">
+          <h4>Location {index + 1}</h4>
+          <div className="area-name">
+            <span>Area: {item.area_name}</span>
+          </div>
+        </div>
+        
         <div className="card-content">
           <div className="score-section">
             <span className="score">Score: {item.score}/100</span>
