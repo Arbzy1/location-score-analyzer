@@ -1,0 +1,149 @@
+.map-view-page {
+  width: 100%;
+  min-height: calc(100vh - 64px); /* Account for navbar height */
+  padding: 0;
+  animation: fadeIn 0.5s ease;
+}
+
+.page-title,
+.page-description,
+.search-container,
+.results-summary,
+.results-list {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  margin: 1rem auto;
+  color: #2d3748;
+}
+
+.page-description {
+  color: #4a5568;
+  margin-bottom: 2rem;
+}
+
+.map-container {
+  width: 100%;
+  height: 70vh;
+  margin: 2rem 0;
+}
+
+.search-container {
+  margin-bottom: 2rem;
+}
+
+.no-results {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #edf2f7;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.results-summary {
+  margin: 1.5rem auto;
+}
+
+.results-summary h2 {
+  font-size: 1.25rem;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.results-list {
+  margin: 3rem auto;
+}
+
+.results-list h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #2d3748;
+}
+
+.location-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.location-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.location-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.location-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: #2d3748;
+}
+
+.location-card .score {
+  font-weight: bold;
+  color: #4299e1;
+  margin-bottom: 0.5rem;
+}
+
+.location-card h4 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1rem;
+  color: #4a5568;
+}
+
+.amenities-list {
+  list-style-type: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.amenities-list li {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.amenity-type {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.maps-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #4299e1;
+  font-size: 0.9rem;
+}
+
+.maps-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .map-container {
+    height: 50vh;
+  }
+
+  .location-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .page-title,
+  .page-description,
+  .search-container,
+  .results-summary,
+  .results-list {
+    padding: 0 1rem;
+  }
+} 
