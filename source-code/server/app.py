@@ -110,56 +110,81 @@ def analyze_location(city):
         # Get area names for the city once instead of per point
         print("🏘️ Retrieving area names...")
         overpass_url = "http://overpass-api.de/api/interpreter"
+        # Get the city's bounding box
+        bbox = city_gdf.total_bounds  # minx, miny, maxx, maxy
+        # Create a query using the bounding box instead of area name
         area_query = f"""
         [out:json][timeout:30];
-        area[name="{city}"]->.searchArea;
         (
-          node["place"~"^(village|suburb|town|city|hamlet)$"](area.searchArea);
-          way["place"~"^(village|suburb|town|city|hamlet)$"](area.searchArea);
-          relation["place"~"^(village|suburb|town|city|hamlet)$"](area.searchArea);
+          node["place"~"^(suburb|neighbourhood|quarter|town|city|village|hamlet)$"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
+          way["place"~"^(suburb|neighbourhood|quarter|town|city|village|hamlet)$"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
+          relation["place"~"^(suburb|neighbourhood|quarter|town|city|village|hamlet)$"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
         );
         out center;
         """
         try:
+            print(f"Fetching areas within bounding box: {bbox}")
             area_response = requests.get(overpass_url, params={'data': area_query}, timeout=30)
             print(f"Area response status: {area_response.status_code}")
             area_data = area_response.json()
             areas = []
             for elem in area_data.get("elements", []):
                 if "tags" in elem and "name" in elem["tags"]:
+                    area_name = elem["tags"]["name"]
                     if "lat" in elem and "lon" in elem:
                         areas.append({
-                            "name": elem["tags"]["name"],
+                            "name": area_name,
                             "lat": elem["lat"],
-                            "lon": elem["lon"]
+                            "lon": elem["lon"],
+                            "type": elem["tags"].get("place", "unknown")
                         })
                     elif "center" in elem:
                         areas.append({
-                            "name": elem["tags"]["name"],
+                            "name": area_name,
                             "lat": elem["center"]["lat"],
-                            "lon": elem["center"]["lon"]
+                            "lon": elem["center"]["lon"],
+                            "type": elem["tags"].get("place", "unknown")
                         })
-            print(f"Found {len(areas)} areas")
+            print(f"Found {len(areas)} areas: {[area['name'] for area in areas]}")
+            
+            if not areas:
+                print("No areas found, falling back to geocoding")
+                # Fallback: Use the city name itself
+                areas = [{
+                    "name": city,
+                    "lat": city_gdf.geometry.centroid.y.iloc[0],
+                    "lon": city_gdf.geometry.centroid.x.iloc[0],
+                    "type": "city"
+                }]
         except Exception as e:
             print(f"⚠️ Error retrieving area names: {e}")
             print("Falling back to city name for areas")
             areas = [{
                 "name": city,
                 "lat": city_gdf.geometry.centroid.y.iloc[0],
-                "lon": city_gdf.geometry.centroid.x.iloc[0]
+                "lon": city_gdf.geometry.centroid.x.iloc[0],
+                "type": "city"
             }]
 
         def find_nearest_area(lat, lon, areas):
             if not areas:
                 return "Unknown Area"
             min_dist = None
-            nearest_name = None
+            nearest_area = None
             for area in areas:
                 d = haversine((lat, lon), (area["lat"], area["lon"]))
                 if min_dist is None or d < min_dist:
                     min_dist = d
-                    nearest_name = area["name"]
-            return nearest_name if nearest_name else "Unknown Area"
+                    nearest_area = area
+            
+            if nearest_area:
+                # Format the area name based on its type
+                area_type = nearest_area.get("type", "area")
+                if area_type in ["suburb", "neighbourhood", "quarter"]:
+                    return f"{nearest_area['name']}"
+                else:
+                    return f"{nearest_area['name']}"
+            return "Unknown Area"
 
         # Ensure correct CRS and use centroids
         def use_centroid(gdf):
