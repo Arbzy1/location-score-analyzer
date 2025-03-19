@@ -14,13 +14,18 @@ import time
 
 app = Flask(__name__)
 
-# Configure CORS properly
+# Update CORS configuration to allow your Render domain
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],  # Add your frontend URL
+        "origins": [
+            "http://localhost:5173",  # Local development
+            "http://127.0.0.1:5173",  # Local development alternative
+            "https://tranquility.onrender.com",  # Your Render frontend domain
+            "https://final-project-university-important-omg.onrender.com"  # Add your actual Render frontend domain
+        ],
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
-        "supports_credentials": False
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
     }
 })
 
