@@ -215,6 +215,25 @@ def find_nearest_place(lat, lon, radius=3000):
         print(f"Error finding nearest place: {e}")
         return "Unknown Area"
 
+def generate_random_points(polygon, num_points):
+    """Generate random points within a polygon"""
+    points = []
+    minx, miny, maxx, maxy = polygon.bounds
+    attempts = 0
+    max_attempts = num_points * 20  # Limit the number of attempts
+
+    while len(points) < num_points and attempts < max_attempts:
+        random_point = Point(
+            random.uniform(minx, maxx),
+            random.uniform(miny, maxy)
+        )
+        if polygon.contains(random_point):
+            points.append(random_point)
+        attempts += 1
+
+    print(f"✅ Generated {len(points)} points after {attempts} attempts")
+    return points
+
 if __name__ == "__main__":
     # Use Render's default port (10000) if PORT isn't set
     port = int(os.environ.get('PORT', 10000))
