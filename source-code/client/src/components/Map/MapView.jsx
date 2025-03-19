@@ -6,10 +6,11 @@ import './MapView.css';
 // Set Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-function MapView({ city = 'Cardiff, UK', locations = [] }) {
+function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [] }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const markersRef = useRef([]);
+  const recommendationMarkersRef = useRef([]);  // Separate ref for recommendation markers
+  const savedLocationMarkersRef = useRef({});   // Separate ref for saved location markers
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -23,24 +24,35 @@ function MapView({ city = 'Cardiff, UK', locations = [] }) {
         zoom: 12
       });
 
-      // Add navigation controls
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
     }
 
-    // Clean up markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
+    // Function to clear all markers of a specific type
+    const clearMarkers = (markersRef) => {
+      if (Array.isArray(markersRef.current)) {
+        markersRef.current.forEach(marker => marker.remove());
+        markersRef.current = [];
+      } else {
+        Object.values(markersRef.current).forEach(marker => marker.remove());
+        markersRef.current = {};
+      }
+    };
 
-    // Add new markers
+    // Clear existing markers
+    clearMarkers(recommendationMarkersRef);
+    clearMarkers(savedLocationMarkersRef);
+
+    // Create bounds object
+    const bounds = new mapboxgl.LngLatBounds();
+
+    // Add recommendation markers
     if (locations.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-
       locations.forEach((location, index) => {
         bounds.extend([location.lon, location.lat]);
 
-        // Create marker element
+        // Create marker element for recommendations
         const el = document.createElement('div');
-        el.className = 'marker';
+        el.className = 'recommendation-marker';
         el.innerHTML = '📍';
 
         // Create popup
@@ -59,16 +71,56 @@ function MapView({ city = 'Cardiff, UK', locations = [] }) {
             </div>
           `);
 
-        // Add marker to map
+        // Add recommendation marker
         const marker = new mapboxgl.Marker(el)
           .setLngLat([location.lon, location.lat])
           .setPopup(popup)
           .addTo(map.current);
 
-        markersRef.current.push(marker);
+        recommendationMarkersRef.current.push(marker);
       });
+    }
 
-      // Fit map to bounds
+    // Add saved location markers
+    savedLocations.forEach(location => {
+      bounds.extend([location.longitude, location.latitude]);
+
+      // Create marker element
+      const el = document.createElement('div');
+      el.className = 'saved-location-marker';
+      const locationType = location.type || 'other';
+      el.setAttribute('data-type', locationType);
+
+      // Create popup with the label
+      const popup = new mapboxgl.Popup({
+        offset: 12,
+        closeButton: false,
+        className: 'custom-popup'
+      })
+      .setHTML(`
+        <div class="popup-content">
+          <h3>${location.label}</h3>
+          <p>${location.postcode}</p>
+        </div>
+      `);
+
+      // Add marker with popup
+      const marker = new mapboxgl.Marker({
+        element: el,
+        anchor: 'bottom',  // This ensures the marker points to the exact location
+      })
+        .setLngLat([location.longitude, location.latitude])
+        .setPopup(popup)
+        .addTo(map.current);
+
+      // Show popup by default to display the label
+      marker.togglePopup();
+
+      savedLocationMarkersRef.current[location.id] = marker;
+    });
+
+    // Fit map to bounds if there are any points
+    if (locations.length > 0 || savedLocations.length > 0) {
       map.current.fitBounds(bounds, {
         padding: 50,
         maxZoom: 15
@@ -76,13 +128,11 @@ function MapView({ city = 'Cardiff, UK', locations = [] }) {
     }
 
     return () => {
-      if (map.current) {
-        markersRef.current.forEach(marker => marker.remove());
-        map.current.remove();
-        map.current = null;
-      }
+      // Cleanup
+      clearMarkers(recommendationMarkersRef);
+      clearMarkers(savedLocationMarkersRef);
     };
-  }, [locations]);
+  }, [locations, savedLocations]);
 
   return (
     <div className="map-container">

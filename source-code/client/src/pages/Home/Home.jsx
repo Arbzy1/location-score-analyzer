@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MapView from "../../components/Map/MapView";
 import SearchBar from "../../components/SearchBar/SearchBar";
+import PostcodeInput from '../../components/PostcodeInput/PostcodeInput';
 import "./Home.css";
 
 function Home() {
@@ -12,6 +13,8 @@ function Home() {
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [targetPostcode, setTargetPostcode] = useState(null);
+  const [savedLocations, setSavedLocations] = useState([]);
 
   const handleSearchStart = (searchQuery) => {
     console.log("🔍 Search started for:", searchQuery);
@@ -88,6 +91,14 @@ function Home() {
     }
   };
 
+  const handlePostcodeSubmit = (newLocation, locationIdToRemove) => {
+    if (locationIdToRemove) {
+      setSavedLocations(prev => prev.filter(loc => loc.id !== locationIdToRemove));
+    } else if (newLocation) {
+      setSavedLocations(prev => [...prev, newLocation]);
+    }
+  };
+
   // Debug logging
   useEffect(() => {
     console.log("Current state:", {
@@ -113,6 +124,10 @@ function Home() {
             onSearchResults={handleSearchResults}
             onSearchStart={handleSearchStart}
           />
+          <PostcodeInput 
+            onPostcodeSubmit={handlePostcodeSubmit}
+            savedLocations={savedLocations}
+          />
         </div>
       </div>
 
@@ -131,7 +146,11 @@ function Home() {
       {hasSearched && !isLoading && !error && (
         <div className="map-section">
           <div className="map-container">
-            <MapView city={selectedCity} locations={searchResults} />
+            <MapView 
+              city={selectedCity} 
+              locations={searchResults}
+              savedLocations={savedLocations}
+            />
           </div>
 
           {searchResults.length === 0 ? (

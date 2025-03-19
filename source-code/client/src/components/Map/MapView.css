@@ -1,73 +1,67 @@
+/* Base map styles */
 .map-container {
+  height: 600px;
   width: 100%;
-  height: 500px;
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .map {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
   height: 100%;
+  width: 100%;
 }
 
-/* Marker styling */
-.marker {
-  font-size: 24px;
+/* Recommendation markers (keep original style) */
+.recommendation-marker {
+  width: 25px;
+  height: 25px;
+  background-color: #4CAF50;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
   cursor: pointer;
-  transition: transform 0.2s;
 }
 
-.marker:hover {
-  transform: scale(1.2);
+/* Simplified saved location markers */
+.saved-location-marker {
+  width: 24px;
+  height: 24px;
+  background-color: #2962ff;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
 }
 
-/* Popup styling */
-.mapboxgl-popup {
-  max-width: 300px !important;
-}
+/* Different colors for different types */
+.saved-location-marker[data-type="home"] { background-color: #2962ff; }
+.saved-location-marker[data-type="work"] { background-color: #d32f2f; }
+.saved-location-marker[data-type="school"] { background-color: #388e3c; }
+.saved-location-marker[data-type="other"] { background-color: #7b1fa2; }
 
+/* Popup styles */
 .mapboxgl-popup-content {
-  padding: 16px !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .popup-content {
-  padding: 10px;
-  max-width: 300px;
+  min-width: 200px;
 }
 
 .popup-content h3 {
   margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
   color: #333;
 }
 
 .popup-content p {
   margin: 4px 0;
+  font-size: 13px;
   color: #666;
-}
-
-.popup-content .score {
-  font-weight: bold;
-  color: #2c5282;
-}
-
-.popup-content a {
-  display: inline-block;
-  margin-top: 8px;
-  color: #4299e1;
-  text-decoration: none;
-}
-
-.popup-content a:hover {
-  text-decoration: underline;
 }
 
 /* Navigation controls */
@@ -85,4 +79,39 @@
   .mapboxgl-popup {
     max-width: 260px !important;
   }
-} 
+}
+
+.postcode-marker {
+  position: relative;
+}
+
+.marker-label {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+  border: 1px solid #ccc;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.marker-icon {
+  width: 25px;
+  height: 25px;
+  background-color: #ff4444;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+/* Add different colors for different markers */
+.postcode-marker:nth-child(3n+1) .marker-icon { background-color: #ff4444; }
+.postcode-marker:nth-child(3n+2) .marker-icon { background-color: #44ff44; }
+.postcode-marker:nth-child(3n+3) .marker-icon { background-color: #4444ff; } 
