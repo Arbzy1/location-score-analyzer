@@ -9,6 +9,7 @@ import pyproj
 from functools import wraps
 import math
 import requests
+import os
 
 app = Flask(__name__)
 
@@ -337,5 +338,14 @@ def find_nearest_place(lat, lon, radius=3000):
         return "Unknown Area"
 
 if __name__ == "__main__":
-    print("Server: Starting Flask development server...")
-    app.run(debug=True, port=5000)
+    # Use Render's default port (10000) if PORT isn't set
+    port = int(os.environ.get('PORT', 10000))
+    
+    print(f"Server: Starting on port {port}")
+    
+    # Explicitly bind to 0.0.0.0 as required by Render
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=True
+    )
