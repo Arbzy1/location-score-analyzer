@@ -87,6 +87,9 @@ function MapView({ city = 'Cardiff, UK', locations = [] }) {
   return (
     <div className="map-container">
       <div ref={mapContainer} className="map" />
+      {locations.length > 0 && (
+        <h2 className="locations-title">Top 10 Locations in {city.split(',')[0]}</h2>
+      )}
     </div>
   );
 }

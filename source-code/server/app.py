@@ -230,7 +230,10 @@ def analyze_location(city):
 
             location_data["score"] = round(total_score * 100, 1)
             location_data["name"] = f"Location Score: {location_data['score']}/100"
-            location_data["reason"] = f"Near: {', '.join(f'{k}: {v['name']} ({v['distance']}m)' for k, v in location_data['amenities'].items())}"
+            location_data["reason"] = (
+                f"Near: " + 
+                ', '.join(f"{k}: {v['name']} ({v['distance']}m)" for k, v in location_data['amenities'].items())
+            )
             location_data["google_maps_link"] = f"https://www.google.com/maps?q={pt.y},{pt.x}"
             
             locations.append(location_data)
