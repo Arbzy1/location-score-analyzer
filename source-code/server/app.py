@@ -3,10 +3,10 @@ from flask_cors import CORS
 import osmnx as ox
 import geopandas as gpd
 import random
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 from shapely.ops import transform
 import pyproj
-from functools import wraps, lru_cache
+from functools import lru_cache
 import math
 import requests
 import os
@@ -14,18 +14,12 @@ import time
 
 app = Flask(__name__)
 
-# Update CORS configuration to allow your Render domain
+# Configure CORS
 CORS(app, resources={
     r"/*": {
-        "origins": [
-            "http://localhost:5173",  # Local development
-            "http://127.0.0.1:5173",  # Local development alternative
-            "https://tranquility.onrender.com",  # Your Render frontend domain
-            "https://final-project-university-important-omg.onrender.com"  # Add your actual Render frontend domain
-        ],
+        "origins": ["*"],
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
+        "allow_headers": ["Content-Type", "Authorization"]
     }
 })
 
@@ -35,6 +29,9 @@ ox.settings.log_console = True
 
 def get_nearest_amenity(pt, gdf):
     """Find the nearest amenity and its distance from a point."""
+    if gdf.empty:
+        return None, None
+        
     transformer = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
     pt_proj = transform(transformer.transform, pt)
     min_distance = None
@@ -49,27 +46,110 @@ def get_nearest_amenity(pt, gdf):
             nearest_row = row
     return min_distance, nearest_row
 
-# Cache the city boundary lookup to avoid repeated API calls
-@lru_cache(maxsize=32)
-def get_city_boundary(city):
-    print(f"📍 Retrieving city boundary for {city}...")
-    return ox.geocode_to_gdf(city)
+def generate_random_points(polygon, num_points):
+    """Generate random points within a polygon"""
+    points = []
+    minx, miny, maxx, maxy = polygon.bounds
+    attempts = 0
+    max_attempts = num_points * 20
 
-def get_amenities_for_city(city, amenity_type):
-    """Fixed function to get amenities with proper parameters"""
-    print(f"🏫 Retrieving {amenity_type}...")
+    while len(points) < num_points and attempts < max_attempts:
+        random_point = Point(
+            random.uniform(minx, maxx),
+            random.uniform(miny, maxy)
+        )
+        if polygon.contains(random_point):
+            points.append(random_point)
+        attempts += 1
+
+    print(f"✅ Generated {len(points)} points after {attempts} attempts")
+    return points
+
+def haversine(coord1, coord2):
+    """Calculate distance between two coordinates."""
+    lat1, lon1 = coord1
+    lat2, lon2 = coord2
+    R = 6371000  # Earth radius in meters
+
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+
+    a = math.sin(dphi/2)**2 + \
+        math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return 2*R*math.asin(math.sqrt(a))
+
+def find_nearest_area(lat, lon, areas):
+    """Find the nearest area name for a location."""
+    if not areas:
+        return "Unknown Area"
+        
+    min_dist = None
+    nearest_area = None
+    
+    for area in areas:
+        d = haversine((lat, lon), (area["lat"], area["lon"]))
+        if min_dist is None or d < min_dist:
+            min_dist = d
+            nearest_area = area
+    
+    return nearest_area["name"] if nearest_area else "Unknown Area"
+
+def get_area_names(bbox):
+    """Get area names within a bounding box."""
+    print("🏘️ Retrieving area names...")
+    overpass_url = "http://overpass-api.de/api/interpreter"
+    
+    area_query = f"""
+    [out:json][timeout:30];
+    (
+      node["place"~"^(suburb|neighbourhood|quarter|town|city|village|hamlet)$"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
+      way["place"~"^(suburb|neighbourhood|quarter|town|city|village|hamlet)$"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
+      relation["place"~"^(suburb|neighbourhood|quarter|town|city|village|hamlet)$"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
+    );
+    out center;
+    """
+    
     try:
-        return ox.features_from_place(city, amenity_type)
+        print(f"Fetching areas within bounding box: {bbox}")
+        response = requests.get(overpass_url, params={'data': area_query}, timeout=30)
+        print(f"Area response status: {response.status_code}")
+        
+        if response.status_code != 200:
+            return []
+            
+        data = response.json()
+        areas = []
+        
+        for elem in data.get("elements", []):
+            if "tags" in elem and "name" in elem["tags"]:
+                area_name = elem["tags"]["name"]
+                if "lat" in elem and "lon" in elem:
+                    areas.append({
+                        "name": area_name,
+                        "lat": elem["lat"],
+                        "lon": elem["lon"]
+                    })
+                elif "center" in elem:
+                    areas.append({
+                        "name": area_name,
+                        "lat": elem["center"]["lat"],
+                        "lon": elem["center"]["lon"]
+                    })
+                    
+        print(f"Found {len(areas)} areas: {[area['name'] for area in areas]}")
+        return areas
+        
     except Exception as e:
-        print(f"⚠️ Error retrieving {amenity_type}: {e}")
-        return gpd.GeoDataFrame()
+        print(f"⚠️ Error retrieving area names: {e}")
+        return []
 
 def analyze_location(city):
     print(f"🔍 Starting analysis for {city}...")
     
     try:
         # Get city boundary
-        city_gdf = get_city_boundary(city)
+        city_gdf = ox.geocode_to_gdf(city)
         if city_gdf.empty:
             print(f"❌ Could not retrieve boundary for {city}")
             return []
@@ -85,67 +165,79 @@ def analyze_location(city):
 
         # Get amenities
         print("🏫 Retrieving amenities...")
-        schools = get_amenities_for_city(city, {"amenity": "school"})
+        schools = ox.features_from_place(city, {"amenity": "school"})
         print("✅ Schools retrieved")
-        hospitals = get_amenities_for_city(city, {"amenity": "hospital"})
+        
+        hospitals = ox.features_from_place(city, {"amenity": "hospital"})
         print("✅ Hospitals retrieved")
-        supermarkets = get_amenities_for_city(city, {"shop": "supermarket"})
+        
+        supermarkets = ox.features_from_place(city, {"shop": "supermarket"})
         print("✅ Supermarkets retrieved")
+
+        # Get area names
+        areas = get_area_names(city_gdf.total_bounds)
 
         # Process locations
         print("📊 Processing amenity data...")
         locations = []
+        
         for pt in candidate_points:
-            location_data = process_location(pt, schools, hospitals, supermarkets, city)
-            if location_data:
-                locations.append(location_data)
+            location_data = {
+                "lat": pt.y,
+                "lon": pt.x,
+                "category": "Recommended Location",
+                "amenities": {},
+                "score": 0
+            }
+            
+            total_score = 0
+            amenities_data = {
+                "school": (schools, 1000, 0.4),
+                "hospital": (hospitals, 2000, 0.5),
+                "supermarket": (supermarkets, 1000, 0.3)
+            }
+            
+            for a_type, (gdf, threshold, weight) in amenities_data.items():
+                if not gdf.empty:
+                    distance, nearest = get_nearest_amenity(pt, gdf)
+                    if distance is not None:
+                        score = weight * (threshold - distance) / threshold if distance < threshold else 0
+                        total_score += score
+                        
+                        location_data["amenities"][a_type] = {
+                            "name": nearest.get("name", "Unnamed"),
+                            "distance": int(distance)
+                        }
+            
+            location_data["score"] = round(total_score * 100, 1)
+            location_data["area_name"] = find_nearest_area(pt.y, pt.x, areas)
+            location_data["google_maps_link"] = f"https://www.google.com/maps?q={pt.y},{pt.x}"
+            
+            locations.append(location_data)
 
         # Sort and return top locations
         locations.sort(key=lambda x: x["score"], reverse=True)
-        return locations[:5]  # Return top 5 locations
+        top_locations = locations[:5]
+        
+        print(f"✅ Analysis complete for {city}")
+        print(f"📊 Final results: {len(locations)} locations processed")
+        
+        print("\nTop 3 locations preview:")
+        for idx, loc in enumerate(top_locations[:3]):
+            print(f"\nLocation {idx + 1}:")
+            print(f"Score: {loc['score']}")
+            print(f"Area: {loc['area_name']}")
+            print(f"Coordinates: {loc['lat']}, {loc['lon']}")
+            print("Amenities:", list(loc['amenities'].keys()))
+        
+        return top_locations
 
     except Exception as e:
         print(f"❌ Error in analyze_location: {str(e)}\n")
         return []
 
-def process_location(point, schools, hospitals, supermarkets, city):
-    """Process a single location point"""
-    location_data = {
-        "lat": point.y,
-        "lon": point.x,
-        "category": "Recommended Location",
-        "amenities": {},
-        "score": 0
-    }
-
-    # Calculate scores for each amenity type
-    amenities = {
-        "school": (schools, 1000, 0.4),
-        "hospital": (hospitals, 2000, 0.5),
-        "supermarket": (supermarkets, 1000, 0.3)
-    }
-
-    total_score = 0
-    for a_type, (gdf, threshold, weight) in amenities.items():
-        if not gdf.empty:
-            distance, nearest = get_nearest_amenity(point, gdf)
-            if distance is not None:
-                score = weight * (threshold - distance) / threshold if distance < threshold else 0
-                total_score += score
-                
-                location_data["amenities"][a_type] = {
-                    "name": nearest.get("name", "Unnamed"),
-                    "distance": int(distance)
-                }
-
-    location_data["score"] = round(total_score * 100, 1)
-    location_data["area_name"] = find_nearest_area(point.y, point.x)
-    location_data["google_maps_link"] = f"https://www.google.com/maps?q={point.y},{point.x}"
-
-    return location_data
-
 @app.route('/amenities', methods=['GET', 'OPTIONS'])
-def get_amenities_route():
+def get_amenities():
     if request.method == 'OPTIONS':
         return '', 204
         
@@ -167,82 +259,7 @@ def get_amenities_route():
         print(f"❌ Server Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-def haversine(coord1, coord2):
-    lat1, lon1 = coord1
-    lat2, lon2 = coord2
-    R = 6371000  # Earth radius in meters
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
-    return 2 * R * math.asin(math.sqrt(a))
-
-def find_nearest_place(lat, lon, radius=3000):
-    overpass_url = "http://overpass-api.de/api/interpreter"
-    query = f"""
-    [out:json][timeout:10];
-    (
-      node["place"~"^(village|suburb|town|city|hamlet)$"](around:{radius},{lat},{lon});
-      way["place"~"^(village|suburb|town|city|hamlet)$"](around:{radius},{lat},{lon});
-      relation["place"~"^(village|suburb|town|city|hamlet)$"](around:{radius},{lat},{lon});
-    );
-    out center;
-    """
-    try:
-        response = requests.get(overpass_url, params={'data': query}, timeout=20)
-        if response.status_code == 200:
-            data = response.json()
-            elements = data.get("elements", [])
-            if not elements:
-                return "Unknown Area"
-            min_dist = None
-            nearest_name = None
-            for elem in elements:
-                if "lat" in elem and "lon" in elem:
-                    item_lat = elem["lat"]
-                    item_lon = elem["lon"]
-                elif "center" in elem:
-                    item_lat = elem["center"]["lat"]
-                    item_lon = elem["center"]["lon"]
-                else:
-                    continue
-                d = haversine((lat, lon), (item_lat, item_lon))
-                if min_dist is None or d < min_dist:
-                    min_dist = d
-                    nearest_name = elem.get("tags", {}).get("name", "Unknown Area")
-            return nearest_name if nearest_name else "Unknown Area"
-    except Exception as e:
-        print(f"Error finding nearest place: {e}")
-        return "Unknown Area"
-
-def generate_random_points(polygon, num_points):
-    """Generate random points within a polygon"""
-    points = []
-    minx, miny, maxx, maxy = polygon.bounds
-    attempts = 0
-    max_attempts = num_points * 20  # Limit the number of attempts
-
-    while len(points) < num_points and attempts < max_attempts:
-        random_point = Point(
-            random.uniform(minx, maxx),
-            random.uniform(miny, maxy)
-        )
-        if polygon.contains(random_point):
-            points.append(random_point)
-        attempts += 1
-
-    print(f"✅ Generated {len(points)} points after {attempts} attempts")
-    return points
-
 if __name__ == "__main__":
-    # Use Render's default port (10000) if PORT isn't set
     port = int(os.environ.get('PORT', 10000))
-    
     print(f"Server: Starting on port {port}")
-    
-    # Explicitly bind to 0.0.0.0 as required by Render
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=True
-    )
+    app.run(host='0.0.0.0', port=port, debug=True)
