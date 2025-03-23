@@ -196,10 +196,22 @@ def analyze_location(city):
                         score = weight * (threshold - distance) / threshold if distance < threshold else 0
                         total_score += score
                         
-                        location_data["amenities"][a_type] = {
-                            "name": nearest.get("name", "Unnamed"),
-                            "distance": int(distance)
-                        }
+                        # Add coordinates of the amenity to the response
+                        # Get centroid for any geometry type
+                        if nearest is not None and nearest.geometry is not None:
+                            # Extract centroid coordinates - works for both Points and Polygons
+                            centroid = nearest.geometry.centroid
+                            location_data["amenities"][a_type] = {
+                                "name": nearest.get("name", "Unnamed"),
+                                "distance": int(distance),
+                                "lat": centroid.y,  # Use centroid coordinates
+                                "lon": centroid.x   # Use centroid coordinates
+                            }
+                        else:
+                            location_data["amenities"][a_type] = {
+                                "name": nearest.get("name", "Unnamed"),
+                                "distance": int(distance)
+                            }
             
             location_data["score"] = round(total_score * 100, 1)
             location_data["area_name"] = find_nearest_area(pt.y, pt.x, areas)

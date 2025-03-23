@@ -303,4 +303,67 @@
   background-color: #e8f0fe;
   color: #1967d2;
   box-shadow: 0 1px 5px rgba(0,0,0,0.15);
+}
+
+/* Amenity Markers */
+.amenity-marker {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  font-size: 12px;
+}
+
+.amenity-marker:hover {
+  transform: scale(1.15);
+}
+
+.amenity-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Show Amenities Button */
+.popup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.show-amenities-btn {
+  padding: 8px 12px;
+  background-color: #f0f2f5;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.show-amenities-btn:hover {
+  background-color: #e4e6e9;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+/* Amenity Popup - slightly different styling */
+.amenity-popup .mapboxgl-popup-content {
+  padding: 15px;
+  border-radius: 8px;
+  max-width: 220px;
+}
+
+.amenity-popup .popup-title {
+  font-size: 15px;
 } 
