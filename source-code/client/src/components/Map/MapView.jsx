@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapView.css';
@@ -6,13 +6,22 @@ import './MapView.css';
 // Set Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [] }) {
+function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], savedPostcodes = [], recommendations = [] }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const recommendationMarkersRef = useRef([]);  // Separate ref for recommendation markers
-  const savedLocationMarkersRef = useRef({});   // Separate ref for saved location markers
+  const savedLocationMarkersRef = useRef([]);  // Initialize as empty array
+  const markersRef = useRef({
+    saved: [],
+    recommendations: []
+  });
+
+  const [lng] = useState(-3.17909);
+  const [lat] = useState(51.481583);
+  const [zoom] = useState(12);
 
   useEffect(() => {
+    console.log('MapView received savedPostcodes:', savedPostcodes);
     if (!mapContainer.current) return;
 
     // Initialize map only once
@@ -20,8 +29,8 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [] }) 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12',
-        center: [-3.18, 51.48], // Default to Cardiff
-        zoom: 12
+        center: [lng, lat],
+        zoom: zoom
       });
 
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -116,7 +125,7 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [] }) 
       // Show popup by default to display the label
       marker.togglePopup();
 
-      savedLocationMarkersRef.current[location.id] = marker;
+      savedLocationMarkersRef.current.push(marker);
     });
 
     // Fit map to bounds if there are any points
@@ -132,7 +141,43 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [] }) 
       clearMarkers(recommendationMarkersRef);
       clearMarkers(savedLocationMarkersRef);
     };
-  }, [locations, savedLocations]);
+  }, [locations, savedLocations, savedPostcodes, lng, lat, zoom]);
+
+  useEffect(() => {
+    if (!map.current || !savedPostcodes) return;
+
+    console.log('Updating saved postcode markers:', savedPostcodes);
+
+    // Clear existing saved markers
+    markersRef.current.saved.forEach(marker => marker.remove());
+    markersRef.current.saved = [];
+
+    // Add new markers
+    savedPostcodes.forEach(location => {
+      if (!location.latitude || !location.longitude) {
+        console.warn('Invalid location data:', location);
+        return;
+      }
+
+      const el = document.createElement('div');
+      el.className = 'saved-location-marker';
+      
+      const popup = new mapboxgl.Popup({ offset: 25 })
+        .setHTML(`
+          <div class="popup-content">
+            <h3>${location.label}</h3>
+            <p>${location.postcode}</p>
+          </div>
+        `);
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([location.longitude, location.latitude])
+        .setPopup(popup)
+        .addTo(map.current);
+
+      markersRef.current.saved.push(marker);
+    });
+  }, [savedPostcodes]);
 
   return (
     <div className="map-container">

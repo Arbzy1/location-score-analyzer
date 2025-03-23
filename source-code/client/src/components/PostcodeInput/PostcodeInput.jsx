@@ -1,18 +1,28 @@
 import { useState } from 'react';
 import './PostcodeInput.css';
 
-function PostcodeInput({ onPostcodeSubmit, savedLocations }) {
+function PostcodeInput({ 
+  onPostcodeSubmit, 
+  onRemovePostcode,
+  savedPostcodes,
+  onAddLocation, 
+  savedLocations, 
+  onRemoveLocation,
+  disabled
+}) {
   const [postcode, setPostcode] = useState('');
   const [label, setLabel] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [locationType, setLocationType] = useState('home');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
-    if (!label.trim()) {
-      setError('Please enter a label for this location');
+    if (!postcode || !label) {
+      setError('Please enter both postcode and label');
       return;
     }
 
@@ -34,83 +44,97 @@ function PostcodeInput({ onPostcodeSubmit, savedLocations }) {
       const data = await response.json();
 
       if (data.status === 200) {
-        onPostcodeSubmit({
-          id: Date.now(),
-          label: label,
-          type: locationType,
+        const newLocation = {
+          id: Date.now().toString(),
+          label,
           postcode: data.result.postcode,
           latitude: data.result.latitude,
           longitude: data.result.longitude
-        });
+        };
         
-        // Clear inputs after successful submission
+        console.log('Submitting new location:', newLocation);
+        onPostcodeSubmit(newLocation);
+        
         setPostcode('');
         setLabel('');
-        setError('');
+        setSuccess('Location added successfully!');
       } else {
-        setError('Postcode not found');
+        setError('Invalid postcode');
       }
-    } catch (err) {
-      setError('Error looking up postcode');
-      console.error('Postcode lookup error:', err);
+    } catch (error) {
+      console.error('Error:', error);
+      setError('Error processing postcode');
     }
   };
 
   return (
     <div className="postcode-input">
-      <form onSubmit={handleSubmit} className="postcode-form">
-        <div className="input-group">
-          <input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Location label (e.g., Home, Office)"
-            className="label-field"
-          />
-          <input
-            type="text"
-            value={postcode}
-            onChange={(e) => setPostcode(e.target.value.toUpperCase())}
-            placeholder="Enter postcode"
-            className="postcode-field"
-          />
-          <select
-            value={locationType}
-            onChange={(e) => setLocationType(e.target.value)}
-            className="location-type-field"
-          >
-            <option value="home">Home</option>
-            <option value="work">Work</option>
-            <option value="school">School</option>
-            <option value="other">Other</option>
-          </select>
-          <button type="submit" className="postcode-button">
-            Add Location
-          </button>
-        </div>
-        {error && <p className="postcode-error">{error}</p>}
-      </form>
-
-      {savedLocations.length > 0 && (
-        <div className="saved-locations">
-          <h3>Saved Locations:</h3>
-          <div className="location-chips">
-            {savedLocations.map((location) => (
-              <div key={location.id} className="location-chip">
-                <span className="location-label">{location.label}</span>
-                <span className="location-postcode">{location.postcode}</span>
-                <button
-                  className="remove-location"
-                  onClick={() => onPostcodeSubmit(null, location.id)}
-                  aria-label="Remove location"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+      <div className="input-section">
+        <h3>Add New Postcode</h3>
+        <form onSubmit={handleSubmit} className="postcode-form">
+          <div className="input-group">
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Location label (e.g., Home, Office)"
+              className="label-field"
+            />
+            <input
+              type="text"
+              value={postcode}
+              onChange={(e) => setPostcode(e.target.value.toUpperCase())}
+              placeholder="Enter postcode"
+              className="postcode-field"
+            />
+            <select
+              value={locationType}
+              onChange={(e) => setLocationType(e.target.value)}
+              className="location-type-field"
+            >
+              <option value="home">Home</option>
+              <option value="work">Work</option>
+              <option value="school">School</option>
+              <option value="other">Other</option>
+            </select>
+            <button type="submit" className="postcode-button">
+              Add Location
+            </button>
           </div>
-        </div>
-      )}
+          {error && <p className="postcode-error">{error}</p>}
+          {success && <p className="postcode-success">{success}</p>}
+        </form>
+      </div>
+
+      <div className="saved-postcodes">
+        <h3>Saved Postcodes</h3>
+        {savedPostcodes.map(postcode => (
+          <div key={postcode.id} className="saved-item">
+            <span>{postcode.label} - {postcode.postcode}</span>
+            <button 
+              onClick={() => onRemovePostcode(postcode.id)}
+              className="remove-button"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="saved-locations">
+        <h3>Saved Locations</h3>
+        {savedLocations.map(location => (
+          <div key={location.id} className="saved-item">
+            <span>{location.label} - {location.postcode}</span>
+            <button 
+              onClick={() => onRemoveLocation(location.id)}
+              className="remove-button"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -4,6 +4,17 @@ import MapView from "../../components/Map/MapView";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import PostcodeInput from '../../components/PostcodeInput/PostcodeInput';
 import "./Home.css";
+import { auth, db } from "../../firebase";
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  collection,
+  updateDoc,
+  arrayUnion,
+  arrayRemove 
+} from 'firebase/firestore';
+import { useAuth } from "../../contexts/AuthContext";
 
 function Home() {
   console.log("🏠 Home: Component mounting");
@@ -15,6 +26,135 @@ function Home() {
   const [error, setError] = useState(null);
   const [targetPostcode, setTargetPostcode] = useState(null);
   const [savedLocations, setSavedLocations] = useState([]);
+  const { currentUser } = useAuth();
+  const [savedPostcodes, setSavedPostcodes] = useState([]);
+
+  // Load saved data when user logs in
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!currentUser) {
+        console.log('No user logged in during load');
+        return;
+      }
+      
+      try {
+        console.log('Loading data for user:', currentUser.uid);
+        const userDoc = doc(db, 'users', currentUser.uid);
+        const docSnap = await getDoc(userDoc);
+        
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          console.log('Loaded user data:', userData);
+          setSavedLocations(userData.savedLocations || []);
+          setSavedPostcodes(userData.savedPostcodes || []);
+        } else {
+          console.log('Creating new user document');
+          await setDoc(userDoc, { 
+            savedLocations: [],
+            savedPostcodes: [],
+            createdAt: new Date().toISOString(),
+            email: currentUser.email
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+
+    loadUserData();
+  }, [currentUser]);
+
+  // Handle adding a new postcode
+  const handlePostcodeSubmit = async (postcodeData) => {
+    if (!currentUser) {
+      alert('Please log in to save postcodes');
+      return;
+    }
+
+    try {
+      console.log('Saving postcode for user:', currentUser.uid);
+      const userDoc = doc(db, 'users', currentUser.uid);
+      const newPostcode = {
+        ...postcodeData,
+        timestamp: new Date().toISOString()
+      };
+
+      // Update the document
+      await updateDoc(userDoc, {
+        savedPostcodes: arrayUnion(newPostcode)
+      });
+
+      // Update local state
+      setSavedPostcodes(prev => [...prev, newPostcode]);
+      
+      // Log success
+      console.log('Postcode saved successfully');
+    } catch (error) {
+      console.error('Error saving postcode:', error);
+      alert('Error saving postcode. Please try again.');
+    }
+  };
+
+  // Handle removing a postcode
+  const handleRemovePostcode = async (postcodeId) => {
+    if (!currentUser) return;
+
+    try {
+      const postcodeToRemove = savedPostcodes.find(pc => pc.id === postcodeId);
+      const userDoc = doc(db, 'users', currentUser.uid);
+      
+      await updateDoc(userDoc, {
+        savedPostcodes: arrayRemove(postcodeToRemove)
+      });
+
+      setSavedPostcodes(prev => prev.filter(pc => pc.id !== postcodeId));
+    } catch (error) {
+      console.error('Error removing postcode:', error);
+    }
+  };
+
+  // Update when adding a new location
+  const handleAddLocation = async (newLocation) => {
+    if (!currentUser) {
+      alert('Please log in to save locations');
+      return;
+    }
+
+    try {
+      const userDoc = doc(db, 'users', currentUser.uid);
+      const locationWithId = {
+        ...newLocation,
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString()
+      };
+
+      await updateDoc(userDoc, {
+        savedLocations: arrayUnion(locationWithId)
+      });
+
+      setSavedLocations(prev => [...prev, locationWithId]);
+    } catch (error) {
+      console.error('Error saving location:', error);
+    }
+  };
+
+  // Remove a saved location
+  const handleRemoveLocation = async (locationId) => {
+    if (!currentUser) return;
+
+    try {
+      const locationToRemove = savedLocations.find(loc => loc.id === locationId);
+      const userDoc = doc(db, 'users', currentUser.uid);
+      
+      await updateDoc(userDoc, {
+        savedLocations: arrayRemove(locationToRemove)
+      });
+
+      setSavedLocations(prev => prev.filter(loc => loc.id !== locationId));
+    } catch (error) {
+      console.error('Error removing location:', error);
+    }
+  };
 
   const handleSearchStart = (searchQuery) => {
     console.log("🔍 Search started for:", searchQuery);
@@ -91,14 +231,6 @@ function Home() {
     }
   };
 
-  const handlePostcodeSubmit = (newLocation, locationIdToRemove) => {
-    if (locationIdToRemove) {
-      setSavedLocations(prev => prev.filter(loc => loc.id !== locationIdToRemove));
-    } else if (newLocation) {
-      setSavedLocations(prev => [...prev, newLocation]);
-    }
-  };
-
   // Debug logging
   useEffect(() => {
     console.log("Current state:", {
@@ -126,7 +258,12 @@ function Home() {
           />
           <PostcodeInput 
             onPostcodeSubmit={handlePostcodeSubmit}
+            onRemovePostcode={handleRemovePostcode}
+            savedPostcodes={savedPostcodes}
+            onAddLocation={handleAddLocation} 
             savedLocations={savedLocations}
+            onRemoveLocation={handleRemoveLocation}
+            disabled={!currentUser}
           />
         </div>
       </div>
@@ -150,6 +287,7 @@ function Home() {
               city={selectedCity} 
               locations={searchResults}
               savedLocations={savedLocations}
+              savedPostcodes={savedPostcodes}
             />
           </div>
 

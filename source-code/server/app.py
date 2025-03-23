@@ -13,15 +13,7 @@ import os
 import time
 
 app = Flask(__name__)
-
-# Configure CORS
-CORS(app, resources={
-    r"/*": {
-        "origins": ["*"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+CORS(app)
 
 print("Server: Starting up Flask application...")
 ox.settings.use_cache = False
@@ -259,7 +251,5 @@ def get_amenities():
         print(f"❌ Server Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 10000))
-    print(f"Server: Starting on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=True)
+if __name__ == '__main__':
+    app.run(host='127.0.0.1', port=5000, debug=True)

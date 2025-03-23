@@ -6,14 +6,14 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   console.log("🔐 AuthProvider: Initializing");
-  const [user, setUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     console.log("🔄 AuthProvider: Setting up auth listener");
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log("👤 Auth state changed:", currentUser ? "User logged in" : "No user");
-      setUser(currentUser);
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      console.log("👤 Auth state changed:", user ? "User logged in" : "No user");
+      setCurrentUser(user);
       setLoading(false);
     });
 
@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
     try {
       const result = await signInWithPopup(auth, provider);
       console.log("✅ Sign-in successful:", result.user.email);
-      setUser(result.user);
+      setCurrentUser(result.user);
     } catch (error) {
       console.error("❌ Login failed:", error);
       throw error;
@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
     try {
       await signOut(auth);
       console.log("✅ Logout successful");
-      setUser(null);
+      setCurrentUser(null);
     } catch (error) {
       console.error("❌ Logout failed:", error);
       throw error;
@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
   };
 
   const value = {
-    user,
+    currentUser,
     loading,
     signIn,
     logout
