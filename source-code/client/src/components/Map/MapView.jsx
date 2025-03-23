@@ -21,35 +21,46 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
   const [lat] = useState(51.481583);
   const [zoom] = useState(12);
   
+  // Create a new ref for map features
+  const mapFeaturesRef = useRef({
+    sources: {},
+    layers: {}
+  });
+
   // Function to clear amenity markers
   const clearAmenityMarkers = () => {
+    if (map.current && map.current.loaded()) {
+      // Remove all tracked layers
+      Object.keys(mapFeaturesRef.current.layers).forEach(layerId => {
+        if (map.current.getLayer(layerId)) {
+          map.current.removeLayer(layerId);
+          delete mapFeaturesRef.current.layers[layerId];
+        }
+      });
+      
+      // Remove all tracked sources
+      Object.keys(mapFeaturesRef.current.sources).forEach(sourceId => {
+        if (map.current.getSource(sourceId)) {
+          map.current.removeSource(sourceId);
+          delete mapFeaturesRef.current.sources[sourceId];
+        }
+      });
+      
+      // Remove event listeners
+      map.current.off('click', 'amenity-points-layer');
+      map.current.off('mouseenter', 'amenity-points-layer');
+      map.current.off('mouseleave', 'amenity-points-layer');
+    }
+    
+    // Clear any remaining standard markers
     if (amenityMarkersRef.current) {
-      // Remove markers
       amenityMarkersRef.current.forEach(marker => marker.remove());
-      
-      // Remove lines
-      if (amenityMarkersRef.current.lineIds) {
-        amenityMarkersRef.current.lineIds.forEach(lineId => {
-          if (map.current && map.current.getStyle()) {  // Check if map and style exist
-            if (map.current.getLayer(lineId)) {
-              map.current.removeLayer(lineId);
-            }
-            if (map.current.getSource(lineId)) {
-              map.current.removeSource(lineId);
-            }
-          }
-        });
-      }
-      
       amenityMarkersRef.current = [];
     }
   };
 
   // Function to add amenity markers
   const addAmenityMarkers = (amenities, mainLocationCoords) => {
-    console.log("Adding amenity markers, data:", amenities);
-    console.log("Main location:", mainLocationCoords);
-    
     // Clear any existing amenity markers first
     clearAmenityMarkers();
     
@@ -59,10 +70,10 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
       return;
     }
     
-    // Ensure map is loaded
+    // Ensure map is loaded before continuing
     if (!map.current || !map.current.loaded()) {
-      console.warn("Map not loaded yet, cannot add markers");
-      setTimeout(() => addAmenityMarkers(amenities, mainLocationCoords), 500);
+      console.log("Map not fully loaded yet, waiting...");
+      setTimeout(() => addAmenityMarkers(amenities, mainLocationCoords), 100);
       return;
     }
     
@@ -77,187 +88,246 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
       'hospital': '#ff6b6b',
       'supermarket': '#51cf66', 
       'school': '#339af0',
+      'park': '#94d82d',
+      'transport': '#fcc419',
+      'pharmacy': '#cc5de8',
+      'gym': '#20c997',
+      'restaurant': '#ff922b',
       'default': '#868e96'
     };
     
-    // Add markers for each amenity
-    let markersAdded = false;
+    // Create GeoJSON feature collection for all amenity points
+    const amenityPoints = {
+      type: 'FeatureCollection',
+      features: []
+    };
     
+    // Create GeoJSON feature collection for all connection lines
+    const connectionLines = {
+      type: 'FeatureCollection',
+      features: []
+    };
+    
+    // Process each amenity
     Object.entries(amenities).forEach(([type, amenity]) => {
-      console.log(`Processing ${type} amenity:`, amenity);
-      
-      // Calculate coordinates if not explicitly provided
-      let amenityLat, amenityLon;
-      
-      if (amenity.lat && amenity.lon) {
-        amenityLat = amenity.lat;
-        amenityLon = amenity.lon;
-        console.log(`Using provided coordinates: [${amenityLat}, ${amenityLon}]`);
-      } else {
-        // When no coordinates are available, place based on distance in a cardinal direction
-        console.log(`No coordinates for ${type}, calculating based on distance`);
-        
-        // Use type to determine a logical direction/bearing
-        let bearing;
-        switch(type.toLowerCase()) {
-          case 'hospital': bearing = 0; break;     // North
-          case 'supermarket': bearing = 90; break; // East  
-          case 'school': bearing = 180; break;     // South
-          default: bearing = 270; break;           // West
-        }
-        
-        // Convert distance from meters to approximate degrees
-        // This is a rough approximation (1 degree ~ 111km near the equator)
-        const distanceInKm = amenity.distance / 1000;
-        const distanceInDegrees = distanceInKm / 111;
-        
-        // Simple calculation for coordinates
-        const bearingRad = bearing * Math.PI / 180;
-        amenityLat = mainLocationCoords.lat + distanceInDegrees * Math.cos(bearingRad);
-        amenityLon = mainLocationCoords.lon + distanceInDegrees * Math.sin(bearingRad) / 
-                     Math.cos(mainLocationCoords.lat * Math.PI / 180);
-        
-        console.log(`Calculated coordinates: [${amenityLat}, ${amenityLon}]`);
-      }
-      
-      // Skip if we don't have valid coordinates
-      if (!amenityLat || !amenityLon || isNaN(amenityLat) || isNaN(amenityLon)) {
-        console.warn(`Invalid coordinates for ${type}`);
+      // Skip if no location data
+      if (!amenity.lat || !amenity.lon) {
+        console.warn(`Missing coordinates for ${type}`);
         return;
       }
       
-      // Extend bounds to include this amenity
-      bounds.extend([amenityLon, amenityLat]);
+      console.log(`Adding ${type} at ${amenity.lon}, ${amenity.lat}`);
       
-      // Create custom element for the amenity marker
-      const el = document.createElement('div');
-      el.className = 'amenity-marker';
+      // Extend bounds to include this amenity
+      bounds.extend([amenity.lon, amenity.lat]);
       
       // Determine color based on amenity type
       const color = amenityColors[type.toLowerCase()] || amenityColors.default;
-      
-      // Set background color
-      el.style.backgroundColor = color;
       
       // Add icon based on type
       const iconMap = {
         'hospital': '🏥',
         'supermarket': '🛒',
         'school': '🏫',
+        'park': '🌳',
+        'transport': '🚍',
+        'pharmacy': '💊',
+        'gym': '💪',
+        'restaurant': '🍽️',
       };
       
       const icon = iconMap[type.toLowerCase()] || '📍';
-      el.innerHTML = `<span class="amenity-icon">${icon}</span>`;
       
-      // Create popup for the amenity
-      const popup = new mapboxgl.Popup({ 
-        offset: 25,
-        closeOnClick: false,
-        className: 'amenity-popup'
-      })
-      .setHTML(`
-        <div class="popup-content">
-          <h3 class="popup-title">${amenity.name || type}</h3>
-          <div class="info-row">
-            <span>Type</span>
-            <span>${type}</span>
-          </div>
-          <div class="info-row">
-            <span>Distance</span>
-            <span>${amenity.distance}m</span>
-          </div>
-        </div>
-      `);
-      
-      console.log(`Adding marker for ${type} at [${amenityLon}, ${amenityLat}]`);
-      
-      // Add marker to map
-      try {
-        const marker = new mapboxgl.Marker({
-          element: el,
-          anchor: 'bottom'
-        })
-        .setLngLat([amenityLon, amenityLat])
-        .setPopup(popup)
-        .addTo(map.current);
-        
-        // Store reference to marker
-        amenityMarkersRef.current.push(marker);
-        markersAdded = true;
-        
-        // Add a line connecting main location to this amenity
-        const lineId = `route-to-${type}`;
-        
-        // Add the line to the map
-        try {
-          if (map.current.getSource(lineId)) {
-            // If source already exists, update it
-            const source = map.current.getSource(lineId);
-            source.setData({
-              type: 'Feature',
-              geometry: {
-                type: 'LineString',
-                coordinates: [
-                  [mainLocationCoords.lon, mainLocationCoords.lat],
-                  [amenityLon, amenityLat]
-                ]
-              }
-            });
-          } else {
-            // Otherwise create a new source and layer
-            map.current.addSource(lineId, {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                geometry: {
-                  type: 'LineString',
-                  coordinates: [
-                    [mainLocationCoords.lon, mainLocationCoords.lat],
-                    [amenityLon, amenityLat]
-                  ]
-                }
-              }
-            });
-            
-            map.current.addLayer({
-              id: lineId,
-              type: 'line',
-              source: lineId,
-              paint: {
-                'line-color': color,
-                'line-width': 2,
-                'line-dasharray': [2, 1],
-                'line-opacity': 0.7
-              }
-            });
-            
-            // Store line ID for cleanup
-            amenityMarkersRef.current.lineIds = amenityMarkersRef.current.lineIds || [];
-            amenityMarkersRef.current.lineIds.push(lineId);
-          }
-        } catch (err) {
-          console.error(`Error adding line for ${type}:`, err);
+      // Add amenity point to GeoJSON
+      amenityPoints.features.push({
+        type: 'Feature',
+        properties: {
+          type: type,
+          name: amenity.name,
+          distance: amenity.distance,
+          color: color,
+          icon: icon
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [amenity.lon, amenity.lat]
         }
-      } catch (err) {
-        console.error(`Error adding marker for ${type}:`, err);
-      }
+      });
+      
+      // Add connection line to GeoJSON
+      connectionLines.features.push({
+        type: 'Feature',
+        properties: {
+          type: type,
+          color: color
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [mainLocationCoords.lon, mainLocationCoords.lat],
+            [amenity.lon, amenity.lat]
+          ]
+        }
+      });
     });
     
-    // Fit map to include all amenities with padding
-    if (markersAdded) {
-      console.log("Fitting map to bounds:", bounds);
-      try {
-        map.current.fitBounds(bounds, {
-          padding: { top: 50, bottom: 50, left: 50, right: 50 },
-          maxZoom: 15,
-          duration: 1000
-        });
-      } catch (err) {
-        console.error("Error fitting bounds:", err);
+    // Add source and layer for connection lines
+    try {
+      // Add connection lines source
+      const linesSourceId = 'amenity-lines-source';
+      if (map.current.getSource(linesSourceId)) {
+        map.current.removeLayer('amenity-lines-layer');
+        map.current.removeSource(linesSourceId);
       }
-    } else {
-      console.warn("No markers were added to map");
+      
+      map.current.addSource(linesSourceId, {
+        type: 'geojson',
+        data: connectionLines
+      });
+      
+      // Add connection lines layer
+      map.current.addLayer({
+        id: 'amenity-lines-layer',
+        type: 'line',
+        source: linesSourceId,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 2,
+          'line-opacity': 0.7,
+          'line-dasharray': [2, 1]
+        }
+      });
+      
+      // Track for cleanup
+      mapFeaturesRef.current.sources[linesSourceId] = true;
+      mapFeaturesRef.current.layers['amenity-lines-layer'] = true;
+    } catch (error) {
+      console.error('Error adding lines:', error);
     }
+    
+    // Add source and layer for amenity points
+    try {
+      // Add amenity points source
+      const pointsSourceId = 'amenity-points-source';
+      if (map.current.getSource(pointsSourceId)) {
+        map.current.removeLayer('amenity-points-layer');
+        map.current.removeSource(pointsSourceId);
+      }
+      
+      map.current.addSource(pointsSourceId, {
+        type: 'geojson',
+        data: amenityPoints
+      });
+      
+      // Add amenity points layer
+      map.current.addLayer({
+        id: 'amenity-points-layer',
+        type: 'symbol',
+        source: pointsSourceId,
+        layout: {
+          'text-field': ['get', 'icon'],
+          'text-size': 20,
+          'text-allow-overlap': false,
+          'text-ignore-placement': false,
+          'text-anchor': 'bottom',
+          'text-offset': [0, -0.25]
+        }
+      });
+      
+      // Track for cleanup
+      mapFeaturesRef.current.sources[pointsSourceId] = true;
+      mapFeaturesRef.current.layers['amenity-points-layer'] = true;
+      
+      // Set up click listeners for the points
+      map.current.on('click', 'amenity-points-layer', (e) => {
+        if (e.features && e.features.length > 0) {
+          const feature = e.features[0];
+          const coordinates = feature.geometry.coordinates.slice();
+          const properties = feature.properties;
+          
+          // Create popup
+          const popupHTML = `
+            <div class="popup-content">
+              <h3 class="popup-title">${properties.name}</h3>
+              <div class="info-row">
+                <span>Type</span>
+                <span>${properties.type}</span>
+              </div>
+              <div class="info-row">
+                <span>Distance</span>
+                <span>${properties.distance}m</span>
+              </div>
+            </div>
+          `;
+          
+          // Create a popup and set its content
+          new mapboxgl.Popup({ 
+            offset: [0, -20],
+            className: 'amenity-popup',
+            closeButton: true,
+            closeOnClick: false
+          })
+          .setLngLat(coordinates)
+          .setHTML(popupHTML)
+          .addTo(map.current);
+        }
+      });
+      
+      // Change cursor when hovering over points
+      map.current.on('mouseenter', 'amenity-points-layer', () => {
+        map.current.getCanvas().style.cursor = 'pointer';
+      });
+      
+      map.current.on('mouseleave', 'amenity-points-layer', () => {
+        map.current.getCanvas().style.cursor = '';
+      });
+    } catch (error) {
+      console.error('Error adding points:', error);
+    }
+    
+    // Create a visual circle around each amenity point (optional)
+    try {
+      const circlesSourceId = 'amenity-circles-source';
+      if (map.current.getSource(circlesSourceId)) {
+        map.current.removeLayer('amenity-circles-layer');
+        map.current.removeSource(circlesSourceId);
+      }
+      
+      map.current.addSource(circlesSourceId, {
+        type: 'geojson',
+        data: amenityPoints
+      });
+      
+      map.current.addLayer({
+        id: 'amenity-circles-layer',
+        type: 'circle',
+        source: circlesSourceId,
+        paint: {
+          'circle-radius': 14,
+          'circle-color': ['get', 'color'],
+          'circle-opacity': 0.7,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff'
+        }
+      }, 'amenity-points-layer'); // Add circle layer before text to show circles behind text
+      
+      // Track for cleanup
+      mapFeaturesRef.current.sources[circlesSourceId] = true;
+      mapFeaturesRef.current.layers['amenity-circles-layer'] = true;
+    } catch (error) {
+      console.error('Error adding circles:', error);
+    }
+    
+    // Fit map to bounds
+    map.current.fitBounds(bounds, {
+      padding: { top: 70, bottom: 70, left: 70, right: 70 },
+      maxZoom: 15,
+      duration: 1000
+    });
   };
 
   // Add this debug function

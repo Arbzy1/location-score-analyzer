@@ -366,4 +366,9 @@
 
 .amenity-popup .popup-title {
   font-size: 15px;
+}
+
+/* Ensure emoji symbols in map layers render properly */
+.mapboxgl-canvas {
+  font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 } 
