@@ -1,41 +1,39 @@
-import { Link, NavLink } from "react-router-dom";
-import "./Navbar.css";
+import { useAuth } from '../../contexts/AuthContext';
+import './Navbar.css';
 
-function Navbar({ user, onLogin, onLogout }) {
+function Navbar() {
+  const { currentUser, signInWithGoogle, logout } = useAuth();
+
+  const handleLogin = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   return (
     <nav className="navbar">
-      <div className="navbar-container">
-        <Link to="/" className="navbar-logo">
-          StreetAnalysis
-        </Link>
-        
-        <div className="nav-links">
-          <NavLink to="/" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            Home
-          </NavLink>
-          <NavLink to="/map" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            Map View
-          </NavLink>
-          <NavLink to="/about" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-            About
-          </NavLink>
-        </div>
-        
-        <div className="auth-container">
-          {user ? (
-            <div className="user-info">
-              <img src={user.photoURL} alt={user.displayName} className="user-avatar" />
-              <span className="user-name">{user.displayName}</span>
-              <button onClick={onLogout} className="logout-button">
-                Logout
-              </button>
-            </div>
-          ) : (
-            <button onClick={onLogin} className="login-button">
-              Sign in with Google
-            </button>
-          )}
-        </div>
+      <div className="navbar-brand">
+        <a href="/">Property Location Recommender</a>
+      </div>
+      <div className="navbar-links">
+        {currentUser ? (
+          <>
+            <span className="user-email">{currentUser.email}</span>
+            <button onClick={handleLogout} className="nav-link">Logout</button>
+          </>
+        ) : (
+          <button onClick={handleLogin} className="nav-link">Login with Google</button>
+        )}
       </div>
     </nav>
   );

@@ -1,11 +1,19 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { auth, provider } from "../firebase";
-import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebase";
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider,
+  signOut 
+} from "firebase/auth";
+import { useNavigate } from 'react-router-dom';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
 export function AuthProvider({ children }) {
-  console.log("🔐 AuthProvider: Initializing");
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,35 +31,21 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const signIn = async () => {
-    console.log("🔑 Attempting Google sign-in");
-    try {
-      const result = await signInWithPopup(auth, provider);
-      console.log("✅ Sign-in successful:", result.user.email);
-      setCurrentUser(result.user);
-    } catch (error) {
-      console.error("❌ Login failed:", error);
-      throw error;
-    }
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
   };
 
   const logout = async () => {
     console.log("🚪 Attempting logout");
-    try {
-      await signOut(auth);
-      console.log("✅ Logout successful");
-      setCurrentUser(null);
-    } catch (error) {
-      console.error("❌ Logout failed:", error);
-      throw error;
-    }
+    return signOut(auth);
   };
 
   const value = {
     currentUser,
-    loading,
-    signIn,
-    logout
+    signInWithGoogle,
+    logout,
+    loading
   };
 
   if (loading) {
@@ -63,12 +57,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 } 
