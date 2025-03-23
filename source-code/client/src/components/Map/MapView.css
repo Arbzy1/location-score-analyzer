@@ -114,4 +114,193 @@
 /* Add different colors for different markers */
 .postcode-marker:nth-child(3n+1) .marker-icon { background-color: #ff4444; }
 .postcode-marker:nth-child(3n+2) .marker-icon { background-color: #44ff44; }
-.postcode-marker:nth-child(3n+3) .marker-icon { background-color: #4444ff; } 
+.postcode-marker:nth-child(3n+3) .marker-icon { background-color: #4444ff; }
+
+/* Minimal Elegant Popup Styling */
+.custom-location-popup .mapboxgl-popup-content {
+  padding: 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+  max-width: 300px;
+  background-color: white;
+  border: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.popup-content {
+  color: #333;
+}
+
+.popup-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #222;
+  letter-spacing: 0.2px;
+}
+
+.popup-info {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 12px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.info-row span:first-child {
+  color: #666;
+}
+
+.info-row span:last-child {
+  font-weight: 500;
+  color: #333;
+}
+
+.amenities-section {
+  margin-bottom: 16px;
+}
+
+.maps-link {
+  display: block;
+  text-align: center;
+  color: #1a73e8;
+  text-decoration: none;
+  font-size: 14px;
+  margin-top: 4px;
+  transition: opacity 0.2s;
+}
+
+.maps-link:hover {
+  opacity: 0.8;
+}
+
+/* Make close button more subtle */
+.custom-location-popup .mapboxgl-popup-close-button {
+  color: #999;
+  font-size: 20px;
+  padding: 2px 6px;
+  background: transparent;
+  right: 5px;
+  top: 5px;
+}
+
+.custom-location-popup .mapboxgl-popup-close-button:hover {
+  color: #333;
+  background: transparent;
+}
+
+/* Add these CSS rules to enhance popup mechanics and animations */
+
+/* Smoother popup transitions */
+.mapboxgl-popup {
+  will-change: transform;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease;
+}
+
+/* Improve popup appearance when open */
+.mapboxgl-popup.mapboxgl-popup-anchor-bottom {
+  transform-origin: center bottom !important;
+}
+
+/* Add a smooth entrance animation */
+.mapboxgl-popup-content {
+  animation: popup-fade-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-origin: bottom center;
+  backface-visibility: hidden;
+}
+
+@keyframes popup-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Ensure contents don't overflow and have proper scrolling if needed */
+.popup-content {
+  overflow: hidden;
+  max-height: 350px;
+}
+
+/* If scrolling is absolutely needed, make it smooth */
+.amenities-section {
+  max-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  scrollbar-width: thin; /* For Firefox */
+}
+
+/* Custom scrollbar styling for Chrome/Edge/Safari */
+.amenities-section::-webkit-scrollbar {
+  width: 4px;
+}
+
+.amenities-section::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.amenities-section::-webkit-scrollbar-thumb {
+  background: #cccccc;
+  border-radius: 4px;
+}
+
+/* Prevent map jumps when popup is opened/closed */
+.mapboxgl-popup-tip {
+  transition: transform 0.3s ease;
+}
+
+/* Improve popup backdrop */
+.mapboxgl-popup:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.15;
+  filter: blur(10px);
+  background: inherit;
+}
+
+/* Fix for popup staying up during scroll/zoom */
+.mapboxgl-popup-content:focus {
+  outline: none;
+}
+
+/* Make sure links don't cause popup to close accidentally */
+.maps-link {
+  position: relative;
+  z-index: 10; /* Higher z-index to ensure clickability */
+  display: inline-block;
+  padding: 8px 12px;
+  margin-top: 10px;
+  border-radius: 4px;
+  background-color: #f8f8f8;
+  color: #1a73e8;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.maps-link:hover {
+  background-color: #e8f0fe;
+  color: #1967d2;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.15);
+} 

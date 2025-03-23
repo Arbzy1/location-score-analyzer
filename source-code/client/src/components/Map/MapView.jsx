@@ -65,20 +65,43 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         el.innerHTML = '📍';
 
         // Create popup
-        const popup = new mapboxgl.Popup({ offset: 25 })
-          .setHTML(`
-            <div class="popup-content">
-              <h3>Location ${index + 1}</h3>
-              <p class="score">Score: ${location.score}/100</p>
-              <p>Area: ${location.area_name || 'Unknown'}</p>
-              ${Object.entries(location.amenities || {}).map(([type, amenity]) => `
-                <p>${type}: ${amenity.name} (${amenity.distance}m)</p>
-              `).join('')}
-              <a href="${location.google_maps_link}" target="_blank" rel="noopener noreferrer">
-                View on Google Maps
-              </a>
+        const popup = new mapboxgl.Popup({ 
+          offset: 25, 
+          className: 'custom-location-popup',
+          closeOnClick: false,  // Prevent closing when clicking inside popup
+          maxWidth: '320px',    // Consistent max width
+          anchor: 'bottom',     // Always anchor at bottom of marker
+          focusAfterOpen: false // Don't focus the popup (prevents scroll issues)
+        })
+        .setHTML(`
+          <div class="popup-content">
+            <h3 class="popup-title">Location ${index + 1}</h3>
+            
+            <div class="popup-info">
+              <div class="info-row">
+                <span>Score</span>
+                <span>${location.score}/100</span>
+              </div>
+              <div class="info-row">
+                <span>Area</span>
+                <span>${location.area_name || 'Unknown'}</span>
+              </div>
             </div>
-          `);
+            
+            <div class="amenities-section">
+              ${Object.entries(location.amenities || {}).map(([type, amenity]) => `
+                <div class="info-row">
+                  <span>${type}</span>
+                  <span>${amenity.name} · ${amenity.distance}m</span>
+                </div>
+              `).join('')}
+            </div>
+            
+            <a href="${location.google_maps_link}" target="_blank" rel="noopener noreferrer" class="maps-link">
+              View on Google Maps
+            </a>
+          </div>
+        `);
 
         // Add recommendation marker
         const marker = new mapboxgl.Marker(el)
@@ -178,6 +201,22 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
       markersRef.current.saved.push(marker);
     });
   }, [savedPostcodes]);
+
+  // Add this handler to prevent map zoom when scrolling inside popup
+  useEffect(() => {
+    if (!map.current) return;
+
+    map.current.on('load', () => {
+      // Find all popups and add event listeners to prevent scroll propagation
+      document.addEventListener('DOMNodeInserted', (e) => {
+        if (e.target.classList && e.target.classList.contains('mapboxgl-popup-content')) {
+          e.target.addEventListener('wheel', (event) => {
+            event.stopPropagation();
+          });
+        }
+      });
+    });
+  }, []);
 
   return (
     <div className="map-container">
