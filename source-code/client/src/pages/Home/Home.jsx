@@ -9,7 +9,6 @@ import {
   doc, 
   setDoc, 
   getDoc, 
-  collection,
   updateDoc,
   arrayUnion,
   arrayRemove 
@@ -25,9 +24,10 @@ function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [targetPostcode, setTargetPostcode] = useState(null);
-  const [savedLocations, setSavedLocations] = useState([]);
   const { currentUser } = useAuth();
   const [savedPostcodes, setSavedPostcodes] = useState([]);
+
+  console.log('savedPostcodes in Home:', savedPostcodes);
 
   // Load saved data when user logs in
   useEffect(() => {
@@ -45,12 +45,10 @@ function Home() {
         if (docSnap.exists()) {
           const userData = docSnap.data();
           console.log('Loaded user data:', userData);
-          setSavedLocations(userData.savedLocations || []);
           setSavedPostcodes(userData.savedPostcodes || []);
         } else {
           console.log('Creating new user document');
           await setDoc(userDoc, { 
-            savedLocations: [],
             savedPostcodes: [],
             createdAt: new Date().toISOString(),
             email: currentUser.email
@@ -79,15 +77,11 @@ function Home() {
         timestamp: new Date().toISOString()
       };
 
-      // Update the document
       await updateDoc(userDoc, {
         savedPostcodes: arrayUnion(newPostcode)
       });
 
-      // Update local state
       setSavedPostcodes(prev => [...prev, newPostcode]);
-      
-      // Log success
       console.log('Postcode saved successfully');
     } catch (error) {
       console.error('Error saving postcode:', error);
@@ -110,49 +104,6 @@ function Home() {
       setSavedPostcodes(prev => prev.filter(pc => pc.id !== postcodeId));
     } catch (error) {
       console.error('Error removing postcode:', error);
-    }
-  };
-
-  // Update when adding a new location
-  const handleAddLocation = async (newLocation) => {
-    if (!currentUser) {
-      alert('Please log in to save locations');
-      return;
-    }
-
-    try {
-      const userDoc = doc(db, 'users', currentUser.uid);
-      const locationWithId = {
-        ...newLocation,
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString()
-      };
-
-      await updateDoc(userDoc, {
-        savedLocations: arrayUnion(locationWithId)
-      });
-
-      setSavedLocations(prev => [...prev, locationWithId]);
-    } catch (error) {
-      console.error('Error saving location:', error);
-    }
-  };
-
-  // Remove a saved location
-  const handleRemoveLocation = async (locationId) => {
-    if (!currentUser) return;
-
-    try {
-      const locationToRemove = savedLocations.find(loc => loc.id === locationId);
-      const userDoc = doc(db, 'users', currentUser.uid);
-      
-      await updateDoc(userDoc, {
-        savedLocations: arrayRemove(locationToRemove)
-      });
-
-      setSavedLocations(prev => prev.filter(loc => loc.id !== locationId));
-    } catch (error) {
-      console.error('Error removing location:', error);
     }
   };
 
@@ -259,10 +210,7 @@ function Home() {
           <PostcodeInput 
             onPostcodeSubmit={handlePostcodeSubmit}
             onRemovePostcode={handleRemovePostcode}
-            savedPostcodes={savedPostcodes}
-            onAddLocation={handleAddLocation} 
-            savedLocations={savedLocations}
-            onRemoveLocation={handleRemoveLocation}
+            savedPostcodes={savedPostcodes || []}
             disabled={!currentUser}
           />
         </div>
@@ -286,7 +234,6 @@ function Home() {
             <MapView 
               city={selectedCity} 
               locations={searchResults}
-              savedLocations={savedLocations}
               savedPostcodes={savedPostcodes}
             />
           </div>

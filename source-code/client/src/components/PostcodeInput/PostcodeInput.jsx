@@ -4,9 +4,9 @@ import './PostcodeInput.css';
 function PostcodeInput({ 
   onPostcodeSubmit, 
   onRemovePostcode,
-  savedPostcodes,
+  savedPostcodes = [],
   onAddLocation, 
-  savedLocations, 
+  savedLocations = [],
   onRemoveLocation,
   disabled
 }) {
@@ -15,6 +15,9 @@ function PostcodeInput({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [locationType, setLocationType] = useState('home');
+
+  // Add console log to debug
+  console.log('savedPostcodes in PostcodeInput:', savedPostcodes);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -106,35 +109,43 @@ function PostcodeInput({
         </form>
       </div>
 
-      <div className="saved-postcodes">
-        <h3>Saved Postcodes</h3>
-        {savedPostcodes.map(postcode => (
-          <div key={postcode.id} className="saved-item">
-            <span>{postcode.label} - {postcode.postcode}</span>
-            <button 
-              onClick={() => onRemovePostcode(postcode.id)}
-              className="remove-button"
-            >
-              Remove
-            </button>
+      {/* Only render saved postcodes section if savedPostcodes exists and has items */}
+      {Array.isArray(savedPostcodes) && savedPostcodes.length > 0 && (
+        <div className="saved-postcodes">
+          <h3>Saved Postcodes</h3>
+          <div className="saved-postcodes-list">
+            {savedPostcodes.map(location => (
+              <div key={location.id} className="saved-item">
+                <span>{location.label} - {location.postcode}</span>
+                <button 
+                  onClick={() => onRemovePostcode(location.id)}
+                  className="remove-button"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      <div className="saved-locations">
-        <h3>Saved Locations</h3>
-        {savedLocations.map(location => (
-          <div key={location.id} className="saved-item">
-            <span>{location.label} - {location.postcode}</span>
-            <button 
-              onClick={() => onRemoveLocation(location.id)}
-              className="remove-button"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
+      {/* Add similar checks for Saved Locations section */}
+      {Array.isArray(savedLocations) && savedLocations.length > 0 && (
+        <div className="saved-locations">
+          <h3>Saved Locations</h3>
+          {savedLocations.map(location => (
+            <div key={location.id} className="saved-item">
+              <span>{location.label} - {location.postcode}</span>
+              <button 
+                onClick={() => onRemoveLocation(location.id)}
+                className="remove-button"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
