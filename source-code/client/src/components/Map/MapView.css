@@ -716,4 +716,38 @@
 
 .routes-container::-webkit-scrollbar-thumb:hover {
   background: #999;
+}
+
+/* Bus stops zoom info */
+.bus-stops-zoom-info {
+  font-size: 11px;
+  font-style: italic;
+  margin-top: 4px;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+/* Bus stop marker styles */
+.legend-circle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* Route line in legend */
+.legend-line {
+  display: inline-block;
+  width: 20px;
+  height: 3px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Legend section for grouping related items */
+.legend-section {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
 } 

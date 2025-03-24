@@ -40,6 +40,9 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
   const [busDataLoading, setBusDataLoading] = useState(false);
   const [busDataLoaded, setBusDataLoaded] = useState(false);
 
+  // Add this to your component to store consistent colors for route numbers
+  const routeColorCache = useRef({});
+
   // Function to clear amenity markers
   const clearAmenityMarkers = () => {
     if (map.current && map.current.loaded()) {
@@ -612,87 +615,39 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
   };
 
   // Function to fetch bus routes from backend
-  const fetchBusRoutes = async () => {
-    if (busDataLoaded && busRoutesData) return; // Don't fetch again if already loaded
-    
+  const fetchBusRoutes = async (city) => {
     try {
-      setBusDataLoading(true);
-      
-      // Show loading indicator
-      const loadingMessage = document.createElement('div');
-      loadingMessage.id = 'bus-loading-indicator';
-      loadingMessage.className = 'loading-indicator';
-      loadingMessage.innerHTML = '<span>Loading bus routes...</span>';
-      map.current.getContainer().appendChild(loadingMessage);
-      
-      console.log("Fetching bus routes from backend for", city);
-      
       const response = await fetch(`http://localhost:5000/bus-routes?city=${encodeURIComponent(city)}`);
-      
       if (!response.ok) {
-        throw new Error(`Failed to fetch bus routes: ${response.status}`);
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      
       const data = await response.json();
       console.log("Bus routes data received:", data);
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      setBusRoutesData(data);
-      setBusDataLoaded(true);
-      
-      // Remove loading indicator
-      const indicator = document.getElementById('bus-loading-indicator');
-      if (indicator) indicator.remove();
-      
       return data;
     } catch (error) {
       console.error("Error fetching bus routes:", error);
-      
-      // Update loading indicator to show error
-      const indicator = document.getElementById('bus-loading-indicator');
-      if (indicator) {
-        indicator.innerHTML = `<span style="color:#ff6b6b">Error: ${error.message}</span>`;
-        setTimeout(() => indicator.remove(), 3000);
-      }
-      
       throw error;
-    } finally {
-      setBusDataLoading(false);
     }
   };
 
-  // Create a function to generate unique colors for bus routes
-  const generateRouteColor = (routeRef) => {
-    // Define a set of colors to cycle through
-    const colors = [
-      '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
-      '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
-      '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', 
-      '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
-    ];
-    
-    // Use the route reference to select a color
-    if (!routeRef) return colors[0]; // Default color
-    
-    // Create a simple hash of the route ref to select a color
-    let hash = 0;
-    for (let i = 0; i < routeRef.length; i++) {
-      hash = routeRef.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    const index = Math.abs(hash) % colors.length;
-    return colors[index];
-  };
-
-  // Function to display bus routes on the map
+  // Update the displayBusRoutes function with proper color handling and zoom-dependent visibility
   const displayBusRoutes = (data) => {
     if (!map.current || !map.current.loaded() || !data) return;
     
     try {
       console.log("Displaying bus routes and stops on map...");
+      
+      // Create a mapping of route refs to colors for consistency
+      const routeColors = {};
+      if (data.routes && data.routes.features) {
+        data.routes.features.forEach(feature => {
+          if (feature.properties && feature.properties.ref) {
+            if (!routeColors[feature.properties.ref]) {
+              routeColors[feature.properties.ref] = generateRouteColor(feature.properties.ref);
+            }
+          }
+        });
+      }
       
       // Add bus routes source if it doesn't exist
       if (!map.current.getSource('bus-routes-source')) {
@@ -726,10 +681,15 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
             'visibility': 'visible'
           },
           paint: {
-            'line-color': ['string', ['case',
-              ['has', 'ref'], ['concat', '#', ['format', ['get', 'ref'], {}]],
+            // Use a match expression to map route refs to pre-defined colors
+            'line-color': [
+              'match',
+              ['get', 'ref'],
+              // For each route ref, provide its color
+              ...Object.entries(routeColors).flatMap(([ref, color]) => [ref, color]),
+              // Default color for routes without a ref
               '#888888'
-            ]],
+            ],
             'line-width': 3,
             'line-opacity': 0.8
           }
@@ -748,21 +708,33 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
           layout: {
             'text-field': ['get', 'ref'],
             'text-font': ['Open Sans Bold'],
-            'text-size': 12,
             'symbol-placement': 'line',
             'text-offset': [0, -0.5],
             'text-anchor': 'center',
             'text-justify': 'center',
             'visibility': 'visible',
             'text-allow-overlap': false,
-            'text-ignore-placement': false
+            'text-ignore-placement': false,
+            // Only show labels when zoomed in enough
+            'text-size': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              10, 0,  // Hidden at zoom level 10 or less
+              11, 10, // Start showing at zoom level 11
+              14, 12  // Full size at zoom level 14+
+            ]
           },
           paint: {
             'text-color': '#ffffff',
-            'text-halo-color': ['string', ['case',
-              ['has', 'ref'], ['concat', '#', ['format', ['get', 'ref'], {}]],
+            'text-halo-color': [
+              'match',
+              ['get', 'ref'],
+              // Use the same colors as the routes
+              ...Object.entries(routeColors).flatMap(([ref, color]) => [ref, color]),
+              // Default color for routes without a ref
               '#888888'
-            ]],
+            ],
             'text-halo-width': 2
           }
         });
@@ -770,20 +742,35 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         mapFeaturesRef.current.layers['bus-route-labels'] = true;
       }
       
-      // Add bus stops layer if it doesn't exist
+      // Add bus stops layer if it doesn't exist - with zoom-dependent visibility
       if (!map.current.getLayer('bus-stops-layer')) {
         map.current.addLayer({
           id: 'bus-stops-layer',
           type: 'circle',
           source: 'bus-stops-source',
+          minzoom: 14, // Only show bus stops when zoom level is 14 or higher
           layout: {
             'visibility': 'visible'
           },
           paint: {
-            'circle-radius': 4,
+            'circle-radius': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              14, 2,  // Small at zoom level 14
+              16, 4   // Full size at zoom level 16+
+            ],
             'circle-color': '#ffffff',
             'circle-stroke-color': '#4a89dc',
-            'circle-stroke-width': 2
+            'circle-stroke-width': 2,
+            // Fade in opacity based on zoom
+            'circle-opacity': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              14, 0.5, // Semi-transparent at zoom level 14
+              16, 1.0  // Fully opaque at zoom level 16+
+            ]
           }
         });
         
@@ -791,16 +778,24 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         mapFeaturesRef.current.layers['bus-stops-layer'] = true;
       }
       
-      // Add bus stop labels
+      // Add bus stop labels - with even higher zoom threshold
       if (!map.current.getLayer('bus-stops-labels')) {
         map.current.addLayer({
           id: 'bus-stops-labels',
           type: 'symbol',
           source: 'bus-stops-source',
+          minzoom: 15, // Only show bus stop labels when zoom level is 15 or higher
           layout: {
             'text-field': ['get', 'name'],
             'text-font': ['Open Sans Regular'],
-            'text-size': 10,
+            'text-size': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              15, 0,  // Hidden at zoom level 15 or less
+              16, 8,  // Start showing at zoom level 16
+              18, 10  // Full size at zoom level 18+
+            ],
             'text-offset': [0, 1.2],
             'text-anchor': 'top',
             'text-max-width': 8,
@@ -811,7 +806,16 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
           paint: {
             'text-color': '#4a89dc',
             'text-halo-color': '#ffffff',
-            'text-halo-width': 1
+            'text-halo-width': 1,
+            // Fade in text based on zoom
+            'text-opacity': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              15, 0,   // Transparent at zoom level 15
+              16, 0.7, // Partially visible at zoom level 16
+              17, 1.0  // Fully visible at zoom level 17+
+            ]
           }
         });
         
@@ -819,11 +823,69 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         mapFeaturesRef.current.layers['bus-stops-labels'] = true;
       }
       
-      // Set up interactions for bus stops
-      setupBusLayerInteractions();
+      // Set up interactions for bus stops - only trigger at higher zoom levels
+      map.current.on('click', 'bus-stops-layer', (e) => {
+        // Only show popup if zoomed in enough
+        if (map.current.getZoom() < 14) return;
+        
+        if (e.features && e.features.length > 0) {
+          const feature = e.features[0];
+          const coordinates = feature.geometry.coordinates.slice();
+          const properties = feature.properties;
+          
+          // Create popup content
+          const popupHTML = `
+            <div class="popup-content">
+              <h3 class="popup-title">${properties.name || 'Bus Stop'}</h3>
+              <div class="info-row">
+                <span>Type</span>
+                <span>Bus Stop</span>
+              </div>
+              ${properties.shelter === 'yes' ? `
+              <div class="info-row">
+                <span>Shelter</span>
+                <span>Yes</span>
+              </div>` : ''}
+              ${properties.bench === 'yes' ? `
+              <div class="info-row">
+                <span>Bench</span>
+                <span>Yes</span>
+              </div>` : ''}
+            </div>
+          `;
+          
+          // Create and display popup
+          new mapboxgl.Popup({
+            offset: [0, -10],
+            className: 'bus-stop-popup'
+          })
+          .setLngLat(coordinates)
+          .setHTML(popupHTML)
+          .addTo(map.current);
+        }
+      });
       
-      // Create color-matched legend for bus routes
-      createBusRoutesLegend(data.routes);
+      // Change cursor on hover only when zoomed in enough
+      map.current.on('mouseenter', 'bus-stops-layer', () => {
+        if (map.current.getZoom() >= 14) {
+          map.current.getCanvas().style.cursor = 'pointer';
+        }
+      });
+      
+      map.current.on('mouseleave', 'bus-stops-layer', () => {
+        map.current.getCanvas().style.cursor = '';
+      });
+      
+      // Create legend with zoom-responsive info
+      createBusRoutesLegend(data.routes, routeColors);
+      
+      // Add zoom handler to update legend with bus stop visibility info
+      if (!map.current.listenerCount('zoom', updateBusStopLegendInfo)) {
+        map.current.on('zoom', updateBusStopLegendInfo);
+      }
+      
+      // Initial update for legend info
+      updateBusStopLegendInfo();
       
       console.log("Bus routes displayed successfully");
     } catch (error) {
@@ -832,28 +894,58 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     }
   };
 
-  // Function to create a dynamic legend showing bus route numbers
-  const createBusRoutesLegend = (routesData) => {
+  // Function to update bus stop visibility info in legend
+  const updateBusStopLegendInfo = () => {
+    const legend = document.querySelector('.bus-routes-legend');
+    if (!legend || !map.current) return;
+    
+    const currentZoom = Math.floor(map.current.getZoom());
+    const stopsInfo = legend.querySelector('.bus-stops-zoom-info');
+    
+    if (!stopsInfo) {
+      // Create info element if it doesn't exist
+      const stopsSection = legend.querySelector('.legend-section');
+      if (stopsSection) {
+        const info = document.createElement('div');
+        info.className = 'bus-stops-zoom-info';
+        stopsSection.appendChild(info);
+      }
+    }
+    
+    // Update zoom info text
+    const infoElement = legend.querySelector('.bus-stops-zoom-info');
+    if (infoElement) {
+      if (currentZoom < 14) {
+        infoElement.textContent = 'Zoom in to see bus stops';
+        infoElement.style.color = '#999';
+      } else if (currentZoom < 15) {
+        infoElement.textContent = 'Zoom in more to see stop names';
+        infoElement.style.color = '#777';
+      } else {
+        infoElement.textContent = 'Bus stops visible';
+        infoElement.style.color = '#4a89dc';
+      }
+    }
+  };
+
+  // Update the createBusRoutesLegend function to include zoom info and use the pre-generated colors
+  const createBusRoutesLegend = (routesData, routeColors) => {
     // Remove existing legend
     const existingLegend = document.querySelector('.bus-routes-legend');
     if (existingLegend) existingLegend.remove();
     
     // Get unique route references
-    const routeRefs = new Set();
-    routesData.features.forEach(feature => {
-      const ref = feature.properties.ref;
-      if (ref) routeRefs.add(ref);
-    });
+    const routeRefs = Object.keys(routeColors);
+    
+    // Only show legend if we have routes
+    if (routeRefs.length === 0) return;
     
     // Sort route numbers numerically if possible
-    const sortedRefs = Array.from(routeRefs).sort((a, b) => {
+    const sortedRefs = routeRefs.sort((a, b) => {
       const numA = parseInt(a);
       const numB = parseInt(b);
       return (isNaN(numA) || isNaN(numB)) ? a.localeCompare(b) : numA - numB;
     });
-    
-    // Only show legend if we have routes
-    if (sortedRefs.length === 0) return;
     
     // Create legend container
     const legend = document.createElement('div');
@@ -874,7 +966,7 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     const routesToShow = sortedRefs.slice(0, maxRoutesToShow);
     
     routesToShow.forEach(ref => {
-      const color = generateRouteColor(ref);
+      const color = routeColors[ref];
       
       const item = document.createElement('div');
       item.className = 'legend-item';
@@ -922,158 +1014,94 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     stopsItem.appendChild(stopLabel);
     stopsSection.appendChild(stopsItem);
     
+    // Add zoom info element
+    const zoomInfo = document.createElement('div');
+    zoomInfo.className = 'bus-stops-zoom-info';
+    zoomInfo.textContent = 'Zoom in to see bus stops';
+    zoomInfo.style.fontSize = '11px';
+    zoomInfo.style.color = '#999';
+    zoomInfo.style.fontStyle = 'italic';
+    zoomInfo.style.marginTop = '4px';
+    stopsSection.appendChild(zoomInfo);
+    
     legend.appendChild(stopsSection);
     
     // Add the legend to the map
     map.current.getContainer().appendChild(legend);
   };
 
-  // Update the bus routes visibility function
-  const applyBusRoutesVisibility = (isVisible) => {
-    if (!map.current || !map.current.loaded()) return;
-    
+  // Function to update bus routes visibility
+  const applyBusRoutesVisibility = async (isVisible) => {
     try {
       console.log(`Bus routes toggle: ${isVisible ? 'ON' : 'OFF'}`);
       
       if (isVisible) {
-        // If data isn't loaded yet, fetch it
-        if (!busDataLoaded && !busDataLoading) {
+        if (busRoutesData) {
+          // Use cached data if available
+          console.log("Using cached bus routes data");
+          displayBusRoutes(busRoutesData);
+        } else {
+          // Fetch new data if not cached
           console.log("Bus data not loaded, fetching now...");
-          
-          fetchBusRoutes()
-            .then(data => {
-              // Display the data on the map
-              displayBusRoutes(data);
-            })
-            .catch(error => {
-              console.error("Error loading bus routes:", error);
-            });
-        } else if (busDataLoaded && busRoutesData) {
-          // Just show the layers if already loaded
-          map.current.setLayoutProperty('bus-routes-layer', 'visibility', 'visible');
-          map.current.setLayoutProperty('bus-route-labels', 'visibility', 'visible');
-          map.current.setLayoutProperty('bus-stops-layer', 'visibility', 'visible');
-          map.current.setLayoutProperty('bus-stops-labels', 'visibility', 'visible');
-          
-          // Show the legend
-          const legend = document.querySelector('.bus-routes-legend');
-          if (legend) legend.classList.add('visible');
-          else createBusRoutesLegend(busRoutesData.routes);
+          if (city) {
+            const cityName = city.split(',')[0].trim();
+            console.log(`Fetching bus routes from backend for ${cityName}`);
+            const data = await fetchBusRoutes(cityName);
+            setBusRoutesData(data); // Cache the data
+            displayBusRoutes(data);
+          }
         }
       } else {
-        // Hide layers
-        if (map.current.getLayer('bus-routes-layer')) {
-          map.current.setLayoutProperty('bus-routes-layer', 'visibility', 'none');
-        }
-        if (map.current.getLayer('bus-route-labels')) {
-          map.current.setLayoutProperty('bus-route-labels', 'visibility', 'none');
-        }
-        if (map.current.getLayer('bus-stops-layer')) {
-          map.current.setLayoutProperty('bus-stops-layer', 'visibility', 'none');
-        }
-        if (map.current.getLayer('bus-stops-labels')) {
-          map.current.setLayoutProperty('bus-stops-labels', 'visibility', 'none');
-        }
-        
-        // Hide the legend
-        const legend = document.querySelector('.bus-routes-legend');
-        if (legend) legend.classList.remove('visible');
+        // Hide bus routes and stops
+        removeBusRoutes();
       }
     } catch (error) {
-      console.error('Error toggling bus route layers:', error);
+      console.error("Error toggling bus routes:", error);
     }
   };
 
-  // Set up interactions for bus layers
-  const setupBusLayerInteractions = () => {
-    // Click handler for bus stops
-    map.current.on('click', 'bus-stops-layer', (e) => {
-      if (e.features && e.features.length > 0) {
-        const feature = e.features[0];
-        const coordinates = feature.geometry.coordinates.slice();
-        const properties = feature.properties;
-        
-        // Create popup content
-        const popupHTML = `
-          <div class="popup-content">
-            <h3 class="popup-title">${properties.name || 'Bus Stop'}</h3>
-            <div class="info-row">
-              <span>Type</span>
-              <span>Bus Stop</span>
-            </div>
-            ${properties.shelter !== 'unknown' ? `
-            <div class="info-row">
-              <span>Shelter</span>
-              <span>${properties.shelter}</span>
-            </div>` : ''}
-            ${properties.bench !== 'unknown' ? `
-            <div class="info-row">
-              <span>Bench</span>
-              <span>${properties.bench}</span>
-            </div>` : ''}
-          </div>
-        `;
-        
-        // Create and display popup
-        new mapboxgl.Popup({
-          offset: [0, -10],
-          className: 'bus-stop-popup'
-        })
-        .setLngLat(coordinates)
-        .setHTML(popupHTML)
-        .addTo(map.current);
+  // Add this function to clean up bus routes
+  const removeBusRoutes = () => {
+    if (!map.current) return;
+    
+    // Remove layers
+    ['bus-routes-layer', 'bus-route-labels', 'bus-stops-layer', 'bus-stops-labels'].forEach(layerId => {
+      if (map.current.getLayer(layerId)) {
+        map.current.removeLayer(layerId);
+        delete mapFeaturesRef.current.layers[layerId];
       }
     });
     
-    // Click handler for bus routes
-    map.current.on('click', 'bus-routes-layer', (e) => {
-      if (e.features && e.features.length > 0) {
-        const feature = e.features[0];
-        const properties = feature.properties;
-        
-        // Create popup content
-        const popupHTML = `
-          <div class="popup-content">
-            <h3 class="popup-title">Bus ${properties.ref || ''}</h3>
-            <div class="info-row">
-              <span>Route</span>
-              <span>${properties.name || 'Unnamed'}</span>
-            </div>
-            <div class="info-row">
-              <span>Operator</span>
-              <span>${properties.operator || 'Unknown'}</span>
-            </div>
-          </div>
-        `;
-        
-        // Create and display popup
-        new mapboxgl.Popup({
-          offset: [0, 0],
-          className: 'bus-route-popup'
-        })
-        .setLngLat(e.lngLat)
-        .setHTML(popupHTML)
-        .addTo(map.current);
+    // Remove sources
+    ['bus-routes-source', 'bus-stops-source'].forEach(sourceId => {
+      if (map.current.getSource(sourceId)) {
+        map.current.removeSource(sourceId);
       }
     });
     
-    // Change cursor on hover
-    map.current.on('mouseenter', 'bus-stops-layer', () => {
-      map.current.getCanvas().style.cursor = 'pointer';
-    });
+    // Remove legend
+    const legend = document.querySelector('.bus-routes-legend');
+    if (legend) legend.remove();
     
-    map.current.on('mouseleave', 'bus-stops-layer', () => {
-      map.current.getCanvas().style.cursor = '';
-    });
-    
-    map.current.on('mouseenter', 'bus-routes-layer', () => {
-      map.current.getCanvas().style.cursor = 'pointer';
-    });
-    
-    map.current.on('mouseleave', 'bus-routes-layer', () => {
-      map.current.getCanvas().style.cursor = '';
-    });
+    // Remove event handlers
+    if (map.current.listenerCount('zoom', updateBusStopLegendInfo)) {
+      map.current.off('zoom', updateBusStopLegendInfo);
+    }
   };
+
+  // Update the useEffect to clear cached data when the city changes
+  useEffect(() => {
+    if (city) {
+      // Clear cached bus routes data when city changes
+      setBusRoutesData(null);
+      
+      // If bus routes are currently visible, turn them off
+      if (layersVisible.busRoutes) {
+        setLayersVisible(prev => ({ ...prev, busRoutes: false }));
+        removeBusRoutes();
+      }
+    }
+  }, [city]);
 
   // useEffect for map initialization
   useEffect(() => {
@@ -1412,12 +1440,34 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     });
   }, []);
 
+  // Update the generateRouteColor function to use the cache
+  const generateRouteColor = (routeRef) => {
+    // Check if we already have a color for this route
+    if (routeColorCache.current[routeRef]) {
+      return routeColorCache.current[routeRef];
+    }
+    
+    // Simple hash function to generate a deterministic color from route number/name
+    let hash = 0;
+    for (let i = 0; i < routeRef.length; i++) {
+      hash = routeRef.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Convert to hex format and ensure it's a valid 6-digit hex color
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    
+    // Store in cache for future use
+    routeColorCache.current[routeRef] = color;
+    return color;
+  };
+
   return (
     <div className="map-container">
       <div ref={mapContainer} className="map" />
-      {locations.length > 0 && (
-        <h2 className="locations-title">Top 10 Locations in {city.split(',')[0]}</h2>
-      )}
     </div>
   );
 }

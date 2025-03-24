@@ -169,7 +169,6 @@ function Home() {
       if (processedResults.length > 0) {
         console.log("Setting search results:", processedResults);
         setSearchResults(processedResults);
-        setSelectedCity(processedResults[0].area_name);
         setError(null);
       } else {
         setSearchResults([]);
@@ -244,7 +243,7 @@ function Home() {
             </div>
           ) : (
             <div className="results-section">
-              <h2>Top {searchResults.length} Locations in {selectedCity}</h2>
+              <h2>Top {searchResults.length} Locations in {selectedCity.split(',')[0]}</h2>
               <div className="location-cards">
                 {searchResults.map((location, index) => (
                   <div key={index} className="location-card">
