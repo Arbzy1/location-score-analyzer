@@ -695,6 +695,70 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
           }
         });
         
+        // Add event listeners for bus route interactions
+        map.current.on('click', 'bus-routes-layer', (e) => {
+        if (e.features && e.features.length > 0) {
+          const feature = e.features[0];
+          const properties = feature.properties;
+            const coordinates = e.lngLat;
+          
+            // Create popup HTML
+          const popupHTML = `
+              <div class="popup-content bus-route-popup">
+                <h3 class="popup-title">Bus Route ${properties.ref || 'Unknown'}</h3>
+                
+              <div class="info-row">
+                  <span>Route Name</span>
+                  <span>${properties.name || 'N/A'}</span>
+              </div>
+                
+                ${properties.from && properties.to ? `
+              <div class="info-row">
+                  <span>From</span>
+                  <span>${properties.from}</span>
+              </div>
+              <div class="info-row">
+                  <span>To</span>
+                  <span>${properties.to}</span>
+              </div>
+                ` : ''}
+                
+                ${properties.operator ? `
+                <div class="info-row">
+                  <span>Operator</span>
+                  <span>${properties.operator}</span>
+                </div>
+                ` : ''}
+                
+                ${properties.frequency ? `
+                <div class="info-row">
+                  <span>Frequency</span>
+                  <span>${properties.frequency}</span>
+                </div>
+                ` : ''}
+              </div>
+            `;
+            
+            // Create and show popup
+            new mapboxgl.Popup({
+              offset: [0, -5],
+              className: 'bus-route-popup'
+            })
+            .setLngLat(coordinates)
+            .setHTML(popupHTML)
+            .addTo(map.current);
+          }
+        });
+        
+        // Change cursor on hover
+        map.current.on('mouseenter', 'bus-routes-layer', () => {
+          map.current.getCanvas().style.cursor = 'pointer';
+        });
+        
+        map.current.on('mouseleave', 'bus-routes-layer', () => {
+          map.current.getCanvas().style.cursor = '';
+        });
+        
         // Track for cleanup
         mapFeaturesRef.current.layers['bus-routes-layer'] = true;
       }
@@ -879,13 +943,11 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
       // Create legend with zoom-responsive info
       createBusRoutesLegend(data.routes, routeColors);
       
-      // Add zoom handler to update legend with bus stop visibility info
-      if (!map.current.listenerCount('zoom', updateBusStopLegendInfo)) {
-        map.current.on('zoom', updateBusStopLegendInfo);
-      }
-      
-      // Initial update for legend info
+      // Update legend with initial zoom level info
       updateBusStopLegendInfo();
+      
+      // Add zoom change handler - fixed to use 'on' instead of checking listenerCount
+      map.current.on('zoom', updateBusStopLegendInfo);
       
       console.log("Bus routes displayed successfully");
     } catch (error) {
@@ -896,8 +958,10 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
 
   // Function to update bus stop visibility info in legend
   const updateBusStopLegendInfo = () => {
+    if (!map.current) return;
+    
     const legend = document.querySelector('.bus-routes-legend');
-    if (!legend || !map.current) return;
+    if (!legend) return;
     
     const currentZoom = Math.floor(map.current.getZoom());
     const stopsInfo = legend.querySelector('.bus-stops-zoom-info');
@@ -928,7 +992,7 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     }
   };
 
-  // Update the createBusRoutesLegend function to include zoom info and use the pre-generated colors
+  // Update the createBusRoutesLegend function for better positioning and styling
   const createBusRoutesLegend = (routesData, routeColors) => {
     // Remove existing legend
     const existingLegend = document.querySelector('.bus-routes-legend');
@@ -951,15 +1015,37 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     const legend = document.createElement('div');
     legend.className = 'bus-routes-legend visible';
     
+    // Add inline styles for positioning
+    legend.style.position = 'absolute';
+    legend.style.bottom = '30px';
+    legend.style.right = '10px';
+    legend.style.backgroundColor = 'white';
+    legend.style.borderRadius = '6px';
+    legend.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.2)';
+    legend.style.padding = '10px';
+    legend.style.maxWidth = '250px';
+    legend.style.maxHeight = '300px';
+    legend.style.overflow = 'hidden';
+    legend.style.zIndex = '999';
+    legend.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    
     // Create legend title
     const title = document.createElement('div');
     title.className = 'legend-title';
     title.textContent = 'Bus Routes';
+    title.style.fontWeight = 'bold';
+    title.style.marginBottom = '8px';
+    title.style.paddingBottom = '4px';
+    title.style.borderBottom = '1px solid #eee';
     legend.appendChild(title);
     
     // Create scrollable container for route items
     const routesContainer = document.createElement('div');
     routesContainer.className = 'routes-container';
+    routesContainer.style.maxHeight = '200px';
+    routesContainer.style.overflowY = 'auto';
+    routesContainer.style.paddingRight = '5px';
+    routesContainer.style.marginBottom = '8px';
     
     // Add route items (limit to 10, with "and X more" if needed)
     const maxRoutesToShow = 10;
@@ -968,16 +1054,47 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     routesToShow.forEach(ref => {
       const color = routeColors[ref];
       
+      // Get proper route name from data if available
+      let routeName = '';
+      if (routesData && routesData.features) {
+        const routeFeature = routesData.features.find(f => 
+          f.properties && f.properties.ref === ref
+        );
+        
+        if (routeFeature && routeFeature.properties) {
+          // Use route name if available, otherwise use ref with route prefix
+          routeName = routeFeature.properties.name || 
+                     (routeFeature.properties.from && routeFeature.properties.to ? 
+                     `${routeFeature.properties.from} - ${routeFeature.properties.to}` : 
+                     `Route ${ref}`);
+        }
+      }
+      
+      // If we couldn't find a proper name, just use the ref
+      if (!routeName) routeName = `Route ${ref}`;
+      
       const item = document.createElement('div');
       item.className = 'legend-item';
+      item.style.display = 'flex';
+      item.style.alignItems = 'center';
+      item.style.marginBottom = '5px';
+      item.style.fontSize = '12px';
       
       const colorSwatch = document.createElement('div');
       colorSwatch.className = 'legend-line';
+      colorSwatch.style.width = '20px';
+      colorSwatch.style.height = '4px';
+      colorSwatch.style.marginRight = '8px';
+      colorSwatch.style.borderRadius = '2px';
       colorSwatch.style.backgroundColor = color;
       
       const label = document.createElement('div');
       label.className = 'legend-label';
-      label.textContent = `Route ${ref}`;
+      label.style.flex = '1';
+      label.style.whiteSpace = 'nowrap';
+      label.style.overflow = 'hidden';
+      label.style.textOverflow = 'ellipsis';
+      label.textContent = routeName;
       
       item.appendChild(colorSwatch);
       item.appendChild(label);
@@ -988,6 +1105,10 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     if (sortedRefs.length > maxRoutesToShow) {
       const moreItem = document.createElement('div');
       moreItem.className = 'legend-more';
+      moreItem.style.fontSize = '11px';
+      moreItem.style.color = '#666';
+      moreItem.style.fontStyle = 'italic';
+      moreItem.style.marginTop = '5px';
       moreItem.textContent = `+ ${sortedRefs.length - maxRoutesToShow} more routes`;
       routesContainer.appendChild(moreItem);
     }
@@ -997,17 +1118,29 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     // Add a section for bus stops
     const stopsSection = document.createElement('div');
     stopsSection.className = 'legend-section';
+    stopsSection.style.borderTop = '1px solid #eee';
+    stopsSection.style.paddingTop = '8px';
+    stopsSection.style.marginTop = '5px';
     
     const stopsItem = document.createElement('div');
     stopsItem.className = 'legend-item';
+    stopsItem.style.display = 'flex';
+    stopsItem.style.alignItems = 'center';
+    stopsItem.style.marginBottom = '5px';
+    stopsItem.style.fontSize = '12px';
     
     const stopIcon = document.createElement('div');
     stopIcon.className = 'legend-circle';
+    stopIcon.style.width = '10px';
+    stopIcon.style.height = '10px';
+    stopIcon.style.borderRadius = '50%';
+    stopIcon.style.marginRight = '8px';
     stopIcon.style.backgroundColor = 'white';
     stopIcon.style.border = '2px solid #4a89dc';
     
     const stopLabel = document.createElement('div');
     stopLabel.className = 'legend-label';
+    stopLabel.style.flex = '1';
     stopLabel.textContent = 'Bus Stop';
     
     stopsItem.appendChild(stopIcon);
@@ -1026,8 +1159,9 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     
     legend.appendChild(stopsSection);
     
-    // Add the legend to the map
-    map.current.getContainer().appendChild(legend);
+    // Add the legend directly to the map container's parent
+    const mapContainer = map.current.getContainer();
+    mapContainer.appendChild(legend);
   };
 
   // Function to update bus routes visibility

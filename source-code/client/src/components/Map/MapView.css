@@ -485,8 +485,19 @@
 }
 
 .bus-routes-legend {
-  right: 200px; /* Position to the left of transit legend */
-  border-left-color: #4a89dc;
+  position: absolute !important;
+  bottom: 30px !important;
+  right: 10px !important;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  max-width: 250px;
+  max-height: 300px;
+  overflow: hidden;
+  z-index: 999 !important; /* Ensure it's above other map elements */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  pointer-events: auto; /* Ensure it can be interacted with */
 }
 
 .transit-legend.visible,
@@ -497,32 +508,56 @@
 .legend-title {
   font-weight: bold;
   margin-bottom: 8px;
-  font-size: 14px;
-  color: #333;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #eee;
+}
+
+.routes-container {
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 5px;
+  margin-bottom: 8px;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
+  font-size: 12px;
 }
 
 .legend-line {
   width: 20px;
-  height: 3px;
-  margin-right: 10px;
+  height: 4px;
+  margin-right: 8px;
+  border-radius: 2px;
 }
 
 .legend-circle {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
 .legend-label {
-  font-size: 12px;
-  color: #555;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legend-more {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+  margin-top: 5px;
+}
+
+.legend-section {
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+  margin-top: 5px;
 }
 
 /* Responsive Legend Positioning */
@@ -577,12 +612,6 @@
   to { opacity: 1; }
 }
 
-/* Bus popups */
-.bus-stop-popup .mapboxgl-popup-content,
-.bus-route-popup .mapboxgl-popup-content {
-  border-left: 3px solid #4a89dc;
-}
-
 /* Map Notification */
 .map-notification {
   position: absolute;
@@ -627,127 +656,41 @@
   background-color: #e9ecef;
 }
 
-/* Bus Routes Legend */
-.bus-routes-legend {
-  position: absolute;
-  bottom: 25px;
-  right: 200px;
-  background: white;
-  padding: 12px;
-  border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  z-index: 2;
-  display: none;
-  font-family: 'Segoe UI', Tahoma, sans-serif;
-  border-left: 3px solid #4a89dc;
-  max-width: 200px;
+/* Style for the bus route popup */
+.bus-route-popup {
+  max-width: 280px;
 }
 
-.bus-routes-legend.visible {
-  display: block;
+.bus-route-popup .popup-title {
+  margin-top: 0;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+  font-size: 16px;
 }
 
-.legend-title {
-  font-weight: bold;
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: #333;
-}
-
-.routes-container {
-  max-height: 180px;
-  overflow-y: auto;
-  margin-bottom: 8px;
-  padding-right: 5px;
-}
-
-.legend-item {
+.bus-route-popup .info-row {
   display: flex;
-  align-items: center;
-  margin-bottom: 6px;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 13px;
 }
 
-.legend-line {
-  width: 20px;
-  height: 3px;
-  margin-right: 10px;
-}
-
-.legend-circle {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 10px;
-}
-
-.legend-label {
-  font-size: 12px;
+.bus-route-popup .info-row span:first-child {
+  font-weight: bold;
   color: #555;
+  margin-right: 10px;
 }
 
-.legend-more {
-  font-size: 11px;
-  color: #777;
-  font-style: italic;
-  margin-top: 4px;
-  text-align: center;
+.bus-route-popup .info-row span:last-child {
+  text-align: right;
+  color: #000;
 }
 
-.legend-section {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #eee;
-}
-
-/* Custom scrollbar for routes container */
-.routes-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.routes-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-.routes-container::-webkit-scrollbar-thumb {
-  background: #bbb;
-  border-radius: 10px;
-}
-
-.routes-container::-webkit-scrollbar-thumb:hover {
-  background: #999;
-}
-
-/* Bus stops zoom info */
-.bus-stops-zoom-info {
-  font-size: 11px;
-  font-style: italic;
-  margin-top: 4px;
-  text-align: center;
-  transition: color 0.3s ease;
-}
-
-/* Bus stop marker styles */
-.legend-circle {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 8px;
-}
-
-/* Route line in legend */
-.legend-line {
-  display: inline-block;
-  width: 20px;
-  height: 3px;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-/* Legend section for grouping related items */
-.legend-section {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid #eee;
+/* If legend is still having position issues, try this more aggressive fix */
+.mapboxgl-map .bus-routes-legend {
+  transform: none !important; /* Prevent any transforms that might be affecting it */
+  position: fixed !important; /* Use fixed positioning as a last resort */
+  left: auto !important; /* Override any left positioning */
+  top: auto !important; /* Override any top positioning */
 } 
