@@ -658,21 +658,21 @@
 
 /* Style for the bus route popup */
 .bus-route-popup {
-  max-width: 280px;
+  max-width: 300px;
 }
 
 .bus-route-popup .popup-title {
-  margin-top: 0;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
   font-size: 16px;
+  margin: 0 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  color: #333;
 }
 
 .bus-route-popup .info-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   font-size: 13px;
 }
 
@@ -685,6 +685,8 @@
 .bus-route-popup .info-row span:last-child {
   text-align: right;
   color: #000;
+  max-width: 60%;
+  word-wrap: break-word;
 }
 
 /* If legend is still having position issues, try this more aggressive fix */

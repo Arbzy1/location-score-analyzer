@@ -697,30 +697,30 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         
         // Add event listeners for bus route interactions
         map.current.on('click', 'bus-routes-layer', (e) => {
-        if (e.features && e.features.length > 0) {
-          const feature = e.features[0];
-          const properties = feature.properties;
+          if (e.features && e.features.length > 0) {
+            const feature = e.features[0];
+            const properties = feature.properties;
             const coordinates = e.lngLat;
-          
+            
             // Create popup HTML
-          const popupHTML = `
+            const popupHTML = `
               <div class="popup-content bus-route-popup">
                 <h3 class="popup-title">Bus Route ${properties.ref || 'Unknown'}</h3>
                 
-              <div class="info-row">
+                <div class="info-row">
                   <span>Route Name</span>
                   <span>${properties.name || 'N/A'}</span>
-              </div>
+                </div>
                 
                 ${properties.from && properties.to ? `
-              <div class="info-row">
+                <div class="info-row">
                   <span>From</span>
                   <span>${properties.from}</span>
-              </div>
-              <div class="info-row">
+                </div>
+                <div class="info-row">
                   <span>To</span>
                   <span>${properties.to}</span>
-              </div>
+                </div>
                 ` : ''}
                 
                 ${properties.operator ? `
