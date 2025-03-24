@@ -1253,6 +1253,23 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
 
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
       
+      // Add click handler to close popups when clicking on the map
+      map.current.on('click', (e) => {
+        // Check if click was on a marker (in which case we don't want to close popups)
+        const clickedOnMarker = e.originalEvent.target.closest('.recommendation-marker, .saved-location-marker, .amenity-marker');
+        if (!clickedOnMarker) {
+          // Close all popups
+          const popups = document.querySelectorAll('.mapboxgl-popup');
+          popups.forEach(popup => {
+            // Find the close button and click it
+            const closeButton = popup.querySelector('.mapboxgl-popup-close-button');
+            if (closeButton) {
+              closeButton.click();
+            }
+          });
+        }
+      });
+      
       // Add layer control (custom control)
       map.current.on('load', () => {
         // Create layer controls container
