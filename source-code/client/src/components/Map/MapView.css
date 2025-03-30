@@ -41,27 +41,77 @@
 .saved-location-marker[data-type="other"] { background-color: #7b1fa2; }
 
 /* Popup styles */
+.mapboxgl-popup {
+  max-width: 300px !important;
+  transform-origin: bottom center !important;
+}
+
 .mapboxgl-popup-content {
-  padding: 12px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 15px;
+  min-width: 250px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .popup-content {
-  min-width: 200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
 }
 
-.popup-content h3 {
-  margin: 0 0 8px 0;
+.popup-title {
   font-size: 14px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 500;
+  margin: 0 0 4px 0;
 }
 
-.popup-content p {
-  margin: 4px 0;
-  font-size: 13px;
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.info-row span:first-child {
   color: #666;
+}
+
+.info-row span:last-child {
+  color: #333;
+  font-weight: 500;
+  text-align: right;
+}
+
+.amenities-section {
+  margin: 4px 0;
+}
+
+.popup-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.routing-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.set-start-btn,
+.set-end-btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.clear-route-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+  margin-top: 2px;
 }
 
 /* Navigation controls */
@@ -131,39 +181,10 @@
   color: #333;
 }
 
-.popup-title {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: #222;
-  letter-spacing: 0.2px;
-}
-
 .popup-info {
   margin-bottom: 12px;
   border-bottom: 1px solid #f0f0f0;
   padding-bottom: 12px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.info-row span:first-child {
-  color: #666;
-}
-
-.info-row span:last-child {
-  font-weight: 500;
-  color: #333;
-}
-
-.amenities-section {
-  margin-bottom: 16px;
 }
 
 .maps-link {
@@ -330,13 +351,6 @@
 }
 
 /* Show Amenities Button */
-.popup-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-}
-
 .show-amenities-btn {
   padding: 8px 12px;
   background-color: #f0f2f5;
@@ -732,4 +746,98 @@
   background: #3884ff;
   color: white;
   border-color: #3884ff;
+}
+
+/* Add these styles to your existing CSS */
+.routing-controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.control-button {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  margin: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.control-button:hover {
+  background: #f0f0f0;
+}
+
+.control-button.active {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+.routing-buttons {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.set-start-btn,
+.set-end-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.set-start-btn {
+  background: #ff4444;
+  color: white;
+}
+
+.set-end-btn {
+  background: #4CAF50;
+  color: white;
+}
+
+.set-start-btn:hover {
+  background: #ff2222;
+}
+
+.set-end-btn:hover {
+  background: #43A047;
+}
+
+/* Add a clear route button */
+.clear-route-btn {
+  width: 100%;
+  margin-top: 8px;
+  display: block;
+}
+
+.clear-route-btn:hover {
+  background: #e4e6e9;
+  color: #333;
+}
+
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: white;
+}
+
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: white;
 } 
