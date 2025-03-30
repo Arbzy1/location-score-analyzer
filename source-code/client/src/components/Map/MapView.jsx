@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapView.css';
+import { getDirections } from '../../services/osrmService';
 
 // Set Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -42,6 +43,13 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
 
   // Add this to your component to store consistent colors for route numbers
   const routeColorCache = useRef({});
+
+  // Add new state for routing
+  const [routeLayerVisible, setRouteLayerVisible] = useState(false);
+  const [selectedStartPoint, setSelectedStartPoint] = useState(null);
+  const [selectedEndPoint, setSelectedEndPoint] = useState(null);
+  const routeSourceRef = useRef(null);
+  const routeLayerRef = useRef(null);
 
   // Function to clear amenity markers
   const clearAmenityMarkers = () => {
@@ -1616,9 +1624,136 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     return color;
   };
 
+  // Add new function to handle route display
+  const displayRoute = async (startCoords, endCoords) => {
+    try {
+      console.log('Fetching route for:', { startCoords, endCoords });
+      const routeData = await getDirections(startCoords, endCoords);
+      console.log('OSRM Response:', routeData);
+
+      // Check if we have valid GeoJSON with at least one feature
+      if (routeData.features && routeData.features.length > 0) {
+        // Get the route geometry from the first feature
+        const routeGeometry = routeData.features[0].geometry;
+
+        // Remove existing route layer and source if they exist
+        if (map.current.getSource('route')) {
+          map.current.removeLayer('route-layer');
+          map.current.removeSource('route');
+        }
+
+        // Add the route source and layer
+        map.current.addSource('route', {
+          type: 'geojson',
+          data: routeGeometry
+        });
+
+        map.current.addLayer({
+          id: 'route-layer',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#0066FF',
+            'line-width': 4
+          }
+        });
+
+        // Fit the map to the route bounds
+        const bounds = routeData.bbox;
+        map.current.fitBounds([
+          [bounds[0], bounds[1]], // southwestern corner
+          [bounds[2], bounds[3]]  // northeastern corner
+        ], {
+          padding: 50
+        });
+
+      } else {
+        console.error('Invalid route data:', routeData);
+      }
+    } catch (error) {
+      console.error('Error displaying route:', error);
+    }
+  };
+
+  // Add click handler for map
+  useEffect(() => {
+    if (!map.current) return;
+
+    const handleMapClick = (e) => {
+      const { lng, lat } = e.lngLat;
+      
+      if (!selectedStartPoint) {
+        setSelectedStartPoint([lat, lng]);
+        // Add marker for start point
+        new mapboxgl.Marker({ color: '#ff0000' })
+          .setLngLat([lng, lat])
+          .setPopup(new mapboxgl.Popup().setHTML('Start Point'))
+          .addTo(map.current);
+      } else if (!selectedEndPoint) {
+        setSelectedEndPoint([lat, lng]);
+        // Add marker for end point
+        new mapboxgl.Marker({ color: '#00ff00' })
+          .setLngLat([lng, lat])
+          .setPopup(new mapboxgl.Popup().setHTML('End Point'))
+          .addTo(map.current);
+        
+        // Try to get directions between the points
+        displayRoute([selectedStartPoint[0], selectedStartPoint[1]], [lat, lng])
+          .catch(error => {
+            console.error('Try clicking closer to roads for better routing');
+            // Clear the end point if routing fails
+            setSelectedEndPoint(null);
+          });
+      }
+    };
+
+    map.current.on('click', handleMapClick);
+    return () => {
+      if (map.current) {
+        map.current.off('click', handleMapClick);
+      }
+    };
+  }, [map.current, selectedStartPoint, selectedEndPoint]);
+
+  // Add function to clear route
+  const clearRoute = () => {
+    if (routeLayerRef.current) {
+      map.current.removeLayer(routeLayerRef.current);
+    }
+    if (routeSourceRef.current) {
+      map.current.removeSource(routeSourceRef.current);
+    }
+    setRouteLayerVisible(false);
+    setSelectedStartPoint(null);
+    setSelectedEndPoint(null);
+  };
+
   return (
     <div className="map-container">
       <div ref={mapContainer} className="map" />
+      <div className="map-controls">
+        {/* ... existing controls ... */}
+        
+        {/* Add route controls */}
+        <div className="route-controls">
+          <button 
+            onClick={clearRoute}
+            className={`control-button ${routeLayerVisible ? 'active' : ''}`}
+          >
+            Clear Route
+          </button>
+          {!selectedStartPoint && (
+            <p className="route-instruction">Click to select start point</p>
+          )}
+          {selectedStartPoint && !selectedEndPoint && (
+            <p className="route-instruction">Click to select end point</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
