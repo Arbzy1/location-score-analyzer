@@ -1715,64 +1715,60 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         .setPopup(popup)
         .addTo(map.current);
 
-      // Add event listeners to the popup buttons after popup is open
+      // Add event listeners to the popup buttons
       marker.getPopup().on('open', () => {
-        setTimeout(() => {
-          // Set Start Point button handler
-          const setStartBtn = document.querySelector('.set-start-btn');
-          if (setStartBtn) {
-            setStartBtn.addEventListener('click', () => {
-              const lat = parseFloat(setStartBtn.dataset.lat);
-              const lon = parseFloat(setStartBtn.dataset.lon);
-              if (selectedStartMarker) {
-                selectedStartMarker.marker.getElement().style.border = '';
-              }
-              setSelectedStartMarker({ marker, coords: { lat, lon } });
-              marker.getElement().style.border = '3px solid #ff0000';
-              marker.getPopup().remove(); // Close the popup after selecting
-            });
-          }
+        const setStartBtn = popup.getElement().querySelector('.set-start-btn');
+        const setEndBtn = popup.getElement().querySelector('.set-end-btn');
+        const clearRouteBtn = popup.getElement().querySelector('.clear-route-btn');
 
-          // Set End Point button handler
-          const setEndBtn = document.querySelector('.set-end-btn');
-          if (setEndBtn) {
-            setEndBtn.addEventListener('click', () => {
-              const lat = parseFloat(setEndBtn.dataset.lat);
-              const lon = parseFloat(setEndBtn.dataset.lon);
-              if (selectedEndMarker) {
-                selectedEndMarker.marker.getElement().style.border = '';
-              }
-              setSelectedEndMarker({ marker, coords: { lat, lon } });
-              marker.getElement().style.border = '3px solid #00ff00';
-              
-              // If we have both start and end points, get the route
-              if (selectedStartMarker) {
-                displayRoute(
-                  [selectedStartMarker.coords.lat, selectedStartMarker.coords.lon],
-                  [lat, lon]
-                ).catch(error => {
-                  console.error('Error getting directions:', error);
-                  clearRoute();
-                });
-              }
-              marker.getPopup().remove(); // Close the popup after selecting
-            });
-          }
+        if (setStartBtn) {
+          setStartBtn.addEventListener('click', () => {
+            const lat = parseFloat(setStartBtn.dataset.lat);
+            const lon = parseFloat(setStartBtn.dataset.lon);
+            if (selectedStartMarker) {
+              selectedStartMarker.marker.getElement().style.border = '';
+            }
+            setSelectedStartMarker({ marker, coords: { lat, lon } });
+            marker.getElement().style.border = '3px solid #ff0000';
+            marker.getPopup().remove(); // Close popup after selecting
+          });
+        }
 
-          // Clear Route button handler
-          const clearRouteBtn = document.querySelector('.clear-route-btn');
-          if (clearRouteBtn) {
-            clearRouteBtn.addEventListener('click', () => {
-              clearRoute();
-              marker.getPopup().remove(); // Close the popup after clearing
-            });
-          }
-        }, 100);
+        if (setEndBtn) {
+          setEndBtn.addEventListener('click', () => {
+            const lat = parseFloat(setEndBtn.dataset.lat);
+            const lon = parseFloat(setEndBtn.dataset.lon);
+            if (selectedEndMarker) {
+              selectedEndMarker.marker.getElement().style.border = '';
+            }
+            setSelectedEndMarker({ marker, coords: { lat, lon } });
+            marker.getElement().style.border = '3px solid #00ff00';
+            
+            // If we have both start and end points, get the route
+            if (selectedStartMarker) {
+              displayRoute(
+                [selectedStartMarker.coords.lat, selectedStartMarker.coords.lon],
+                [lat, lon]
+              ).catch(error => {
+                console.error('Error getting directions:', error);
+                clearRoute();
+              });
+            }
+            marker.getPopup().remove(); // Close popup after selecting
+          });
+        }
+
+        if (clearRouteBtn) {
+          clearRouteBtn.addEventListener('click', () => {
+            clearRoute();
+            marker.getPopup().remove();
+          });
+        }
       });
 
       markersRef.current.saved.push(marker);
     });
-  }, [savedPostcodes, routingMode]);
+  }, [savedPostcodes, selectedStartMarker, selectedEndMarker]);
 
   // Add this handler to prevent map zoom when scrolling inside popup
   useEffect(() => {
@@ -1877,20 +1873,21 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     }
   };
 
-  // Add click handlers for markers
+  // Update the handleMarkerClick function
   const handleMarkerClick = (marker, coords) => {
-    if (!routingMode) return;
+    if (!routingMode) {
+      // If not in routing mode, just show the popup
+      marker.togglePopup();
+      return;
+    }
 
     if (!selectedStartMarker) {
       setSelectedStartMarker({ marker, coords });
-      // Add visual feedback
-      const el = marker.getElement();
-      el.style.border = '3px solid #ff0000';
+      marker.getElement().style.border = '3px solid #ff0000';
+      marker.getPopup().remove(); // Close popup after selecting
     } else if (!selectedEndMarker) {
       setSelectedEndMarker({ marker, coords });
-      // Add visual feedback
-      const el = marker.getElement();
-      el.style.border = '3px solid #00ff00';
+      marker.getElement().style.border = '3px solid #00ff00';
       
       // Get directions between the points
       displayRoute(
@@ -1900,6 +1897,7 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         console.error('Error getting directions:', error);
         clearRoute();
       });
+      marker.getPopup().remove(); // Close popup after selecting
     }
   };
 
