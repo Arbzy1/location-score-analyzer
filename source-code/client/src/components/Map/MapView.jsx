@@ -1569,7 +1569,7 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
 
       // Create popup with the label
       const popup = new mapboxgl.Popup({
-        offset: 12,
+        offset: 25,
         closeButton: false,
         className: 'custom-popup'
       })
@@ -1577,6 +1577,15 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         <div class="popup-content">
           <h3>${location.label}</h3>
           <p>${location.postcode}</p>
+          <div class="popup-actions">
+            <div class="routing-buttons">
+              <button class="set-start-btn" data-lat="${location.latitude}" data-lon="${location.longitude}">Set as Start Point</button>
+              <button class="set-end-btn" data-lat="${location.latitude}" data-lon="${location.longitude}">Set as End Point</button>
+            </div>
+            ${selectedStartMarker || selectedEndMarker ? `
+              <button class="clear-route-btn">Clear Route</button>
+            ` : ''}
+          </div>
         </div>
       `);
 
@@ -1591,6 +1600,61 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
 
       // Show popup by default to display the label
       marker.togglePopup();
+
+      // Add event listeners to the popup buttons after popup is open
+      marker.getPopup().on('open', () => {
+        setTimeout(() => {
+          // Set Start Point button handler
+          const setStartBtn = document.querySelector('.set-start-btn');
+          if (setStartBtn) {
+            setStartBtn.addEventListener('click', () => {
+              const lat = parseFloat(setStartBtn.dataset.lat);
+              const lon = parseFloat(setStartBtn.dataset.lon);
+              if (selectedStartMarker) {
+                selectedStartMarker.marker.getElement().style.border = '';
+              }
+              setSelectedStartMarker({ marker, coords: { lat, lon } });
+              marker.getElement().style.border = '3px solid #ff0000';
+              marker.getPopup().remove(); // Close the popup after selecting
+            });
+          }
+
+          // Set End Point button handler
+          const setEndBtn = document.querySelector('.set-end-btn');
+          if (setEndBtn) {
+            setEndBtn.addEventListener('click', () => {
+              const lat = parseFloat(setEndBtn.dataset.lat);
+              const lon = parseFloat(setEndBtn.dataset.lon);
+              if (selectedEndMarker) {
+                selectedEndMarker.marker.getElement().style.border = '';
+              }
+              setSelectedEndMarker({ marker, coords: { lat, lon } });
+              marker.getElement().style.border = '3px solid #00ff00';
+              
+              // If we have both start and end points, get the route
+              if (selectedStartMarker) {
+                displayRoute(
+                  [selectedStartMarker.coords.lat, selectedStartMarker.coords.lon],
+                  [lat, lon]
+                ).catch(error => {
+                  console.error('Error getting directions:', error);
+                  clearRoute();
+                });
+              }
+              marker.getPopup().remove(); // Close the popup after selecting
+            });
+          }
+
+          // Clear Route button handler
+          const clearRouteBtn = document.querySelector('.clear-route-btn');
+          if (clearRouteBtn) {
+            clearRouteBtn.addEventListener('click', () => {
+              clearRoute();
+              marker.getPopup().remove(); // Close the popup after clearing
+            });
+          }
+        }, 100);
+      });
 
       savedLocationMarkersRef.current.push(marker);
     });
@@ -1634,6 +1698,15 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
           <div class="popup-content">
             <h3>${location.label}</h3>
             <p>${location.postcode}</p>
+            <div class="popup-actions">
+              <div class="routing-buttons">
+                <button class="set-start-btn" data-lat="${location.latitude}" data-lon="${location.longitude}">Set as Start Point</button>
+                <button class="set-end-btn" data-lat="${location.latitude}" data-lon="${location.longitude}">Set as End Point</button>
+              </div>
+              ${selectedStartMarker || selectedEndMarker ? `
+                <button class="clear-route-btn">Clear Route</button>
+              ` : ''}
+            </div>
           </div>
         `);
 
@@ -1642,9 +1715,64 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
         .setPopup(popup)
         .addTo(map.current);
 
+      // Add event listeners to the popup buttons after popup is open
+      marker.getPopup().on('open', () => {
+        setTimeout(() => {
+          // Set Start Point button handler
+          const setStartBtn = document.querySelector('.set-start-btn');
+          if (setStartBtn) {
+            setStartBtn.addEventListener('click', () => {
+              const lat = parseFloat(setStartBtn.dataset.lat);
+              const lon = parseFloat(setStartBtn.dataset.lon);
+              if (selectedStartMarker) {
+                selectedStartMarker.marker.getElement().style.border = '';
+              }
+              setSelectedStartMarker({ marker, coords: { lat, lon } });
+              marker.getElement().style.border = '3px solid #ff0000';
+              marker.getPopup().remove(); // Close the popup after selecting
+            });
+          }
+
+          // Set End Point button handler
+          const setEndBtn = document.querySelector('.set-end-btn');
+          if (setEndBtn) {
+            setEndBtn.addEventListener('click', () => {
+              const lat = parseFloat(setEndBtn.dataset.lat);
+              const lon = parseFloat(setEndBtn.dataset.lon);
+              if (selectedEndMarker) {
+                selectedEndMarker.marker.getElement().style.border = '';
+              }
+              setSelectedEndMarker({ marker, coords: { lat, lon } });
+              marker.getElement().style.border = '3px solid #00ff00';
+              
+              // If we have both start and end points, get the route
+              if (selectedStartMarker) {
+                displayRoute(
+                  [selectedStartMarker.coords.lat, selectedStartMarker.coords.lon],
+                  [lat, lon]
+                ).catch(error => {
+                  console.error('Error getting directions:', error);
+                  clearRoute();
+                });
+              }
+              marker.getPopup().remove(); // Close the popup after selecting
+            });
+          }
+
+          // Clear Route button handler
+          const clearRouteBtn = document.querySelector('.clear-route-btn');
+          if (clearRouteBtn) {
+            clearRouteBtn.addEventListener('click', () => {
+              clearRoute();
+              marker.getPopup().remove(); // Close the popup after clearing
+            });
+          }
+        }, 100);
+      });
+
       markersRef.current.saved.push(marker);
     });
-  }, [savedPostcodes]);
+  }, [savedPostcodes, routingMode]);
 
   // Add this handler to prevent map zoom when scrolling inside popup
   useEffect(() => {
@@ -1694,51 +1822,56 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
     try {
       console.log('Fetching route for:', { startCoords, endCoords });
       const routeData = await getDirections(startCoords, endCoords);
-      console.log('OSRM Response:', routeData);
+      console.log('Route data received:', routeData);
 
-      // Check if we have valid GeoJSON with at least one feature
-      if (routeData.features && routeData.features.length > 0) {
-        // Get the route geometry from the first feature
-        const routeGeometry = routeData.features[0].geometry;
-
-        // Remove existing route layer and source if they exist
-        if (map.current.getSource('route')) {
-          map.current.removeLayer('route-layer');
-          map.current.removeSource('route');
-        }
-
-        // Add the route source and layer
-        map.current.addSource('route', {
-          type: 'geojson',
-          data: routeGeometry
-        });
-
-        map.current.addLayer({
-          id: 'route-layer',
-          type: 'line',
-          source: 'route',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          paint: {
-            'line-color': '#0066FF',
-            'line-width': 4
-          }
-        });
-
-        // Fit the map to the route bounds
-        const bounds = routeData.bbox;
-        map.current.fitBounds([
-          [bounds[0], bounds[1]], // southwestern corner
-          [bounds[2], bounds[3]]  // northeastern corner
-        ], {
-          padding: 50
-        });
-
-      } else {
-        console.error('Invalid route data:', routeData);
+      if (!routeData || !routeData.features || !routeData.features.length) {
+        console.error('Invalid route data received');
+        return;
       }
+
+      // Remove existing route if present
+      if (map.current.getSource('route')) {
+        map.current.removeLayer('route-layer');
+        map.current.removeSource('route');
+      }
+
+      // Add the route source
+      map.current.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: routeData.features[0].geometry
+        }
+      });
+
+      // Add the route layer
+      map.current.addLayer({
+        id: 'route-layer',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3887be',
+          'line-width': 5,
+          'line-opacity': 0.75
+        }
+      });
+
+      // Fit the map to show the entire route
+      const coordinates = routeData.features[0].geometry.coordinates;
+      const bounds = coordinates.reduce((bounds, coord) => {
+        return bounds.extend(coord);
+      }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
+
+      map.current.fitBounds(bounds, {
+        padding: 50,
+        duration: 1000
+      });
+
     } catch (error) {
       console.error('Error displaying route:', error);
     }
@@ -1769,53 +1902,6 @@ function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], sa
       });
     }
   };
-
-  // Modify the marker creation code in your useEffect
-  useEffect(() => {
-    if (!map.current || !savedPostcodes) return;
-
-    console.log('Updating saved postcode markers:', savedPostcodes);
-
-    // Clear existing saved markers
-    markersRef.current.saved.forEach(marker => marker.remove());
-    markersRef.current.saved = [];
-
-    // Add new markers
-    savedPostcodes.forEach(location => {
-      if (!location.latitude || !location.longitude) {
-        console.warn('Invalid location data:', location);
-        return;
-      }
-
-      const el = document.createElement('div');
-      el.className = 'saved-location-marker';
-      
-      const popup = new mapboxgl.Popup({ offset: 25 })
-        .setHTML(`
-          <div class="popup-content">
-            <h3>${location.label}</h3>
-            <p>${location.postcode}</p>
-          </div>
-        `);
-
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([location.longitude, location.latitude])
-        .setPopup(popup)
-        .addTo(map.current);
-
-      // Add click handler for routing
-      marker.getElement().addEventListener('click', () => {
-        if (routingMode) {
-          handleMarkerClick(marker, {
-            lat: location.latitude,
-            lon: location.longitude
-          });
-        }
-      });
-
-      markersRef.current.saved.push(marker);
-    });
-  }, [savedPostcodes, routingMode]);
 
   // Add a clear route function
   const clearRoute = () => {
