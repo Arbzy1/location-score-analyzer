@@ -188,20 +188,27 @@ def analyze_location(city):
                 "score": 0
             }
             
-            total_score = 0
-            amenities_data = {
-                "school": (schools, 1000, 0.3),
-                "hospital": (hospitals, 2000, 0.3),
-                "supermarket": (supermarkets, 1000, 0.2)
+            # Initialize scores for each category
+            amenity_scores = {
+                "school": 0,
+                "hospital": 0,
+                "supermarket": 0,
+                "transit": 0
             }
             
             # Calculate amenity scores
+            amenities_data = {
+                "school": (schools, 1000, 0.3),      # 30% weight, 1000m threshold
+                "hospital": (hospitals, 2000, 0.3),   # 30% weight, 2000m threshold
+                "supermarket": (supermarkets, 1000, 0.2)  # 20% weight, 1000m threshold
+            }
+            
             for a_type, (gdf, threshold, weight) in amenities_data.items():
                 if not gdf.empty:
                     distance, nearest = get_nearest_amenity(pt, gdf)
                     if distance is not None:
-                        score = weight * (threshold - distance) / threshold if distance < threshold else 0
-                        total_score += score
+                        # Calculate normalized score (0-1) for this amenity
+                        amenity_scores[a_type] = max(0, (threshold - distance) / threshold)
                         
                         if nearest is not None and nearest.geometry is not None:
                             centroid = nearest.geometry.centroid
@@ -217,18 +224,26 @@ def analyze_location(city):
                                 "distance": int(distance)
                             }
             
-            # Calculate transit accessibility score
-            transit_score = gtfs_service.calculate_transit_score(pt.y, pt.x)
-            total_score += transit_score * 0.2  # 20% weight for transit
+            # Calculate transit score (0-1)
+            transit_score = gtfs_service.calculate_transit_score(pt.y, pt.x) / 100
+            amenity_scores["transit"] = transit_score
             
             # Get accessible routes
             accessible_routes = gtfs_service.get_route_accessibility(pt.y, pt.x)
             location_data["transit"] = {
-                "score": transit_score,
+                "score": transit_score * 100,  # Convert back to 0-100 for display
                 "accessible_routes": accessible_routes
             }
             
-            location_data["score"] = round(total_score * 100, 1)
+            # Calculate final weighted score (0-100)
+            final_score = (
+                amenity_scores["school"] * 30 +      # 30% weight
+                amenity_scores["hospital"] * 30 +     # 30% weight
+                amenity_scores["supermarket"] * 20 +  # 20% weight
+                amenity_scores["transit"] * 20        # 20% weight
+            )
+            
+            location_data["score"] = round(final_score, 1)
             location_data["area_name"] = find_nearest_area(pt.y, pt.x, areas)
             location_data["google_maps_link"] = f"https://www.google.com/maps?q={pt.y},{pt.x}"
             
