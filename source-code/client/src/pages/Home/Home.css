@@ -245,6 +245,118 @@
   color: #4a5568;
 }
 
+/* Saved Locations Section */
+.saved-locations-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+.add-location-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.location-label-input,
+.postcode-input {
+  padding: 8px 12px;
+  background-color: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  width: 200px;
+}
+
+.location-label-input::placeholder,
+.postcode-input::placeholder {
+  color: #999;
+}
+
+.location-type-select {
+  padding: 8px 12px;
+  background-color: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.location-type-select option {
+  background-color: #1a1a1a;
+  color: white;
+}
+
+.add-location-btn {
+  padding: 8px 16px;
+  background-color: #48bb78;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 500;
+}
+
+.add-location-btn:hover {
+  background-color: #38a169;
+}
+
+.saved-postcodes-container {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.saved-postcodes-container h3 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.saved-postcodes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.saved-postcode-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #f8fafc;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.postcode-label {
+  color: #4a5568;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.remove-postcode-btn {
+  padding: 4px 12px;
+  background-color: #f56565;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.remove-postcode-btn:hover {
+  background-color: #e53e3e;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-title {

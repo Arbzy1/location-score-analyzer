@@ -17,6 +17,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
     saved: [],
     recommendations: []
   });
+  const savedPostcodeMarkers = useRef([]);
 
   const [lng] = useState(-3.17909);
   const [lat] = useState(51.481583);
@@ -1454,7 +1455,6 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
       // Create popup with the label
       const popup = new mapboxgl.Popup({
         offset: 25,
-        closeButton: false,
         className: 'custom-popup'
       })
       .setHTML(`
@@ -1462,6 +1462,10 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
           <h3>${location.label}</h3>
           <p>${location.postcode}</p>
           <div class="popup-actions">
+            <button class="show-amenities-btn">Show Amenities on Map</button>
+            <a href="https://www.google.com/maps?q=${location.latitude},${location.longitude}" target="_blank" rel="noopener noreferrer" class="maps-link">
+              View on Google Maps
+            </a>
             <div class="routing-buttons">
               <button class="set-start-btn" data-lat="${location.latitude}" data-lon="${location.longitude}">Set as Start Point</button>
               <button class="set-end-btn" data-lat="${location.latitude}" data-lon="${location.longitude}">Set as End Point</button>
@@ -1476,18 +1480,28 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
       // Add marker with popup
       const marker = new mapboxgl.Marker({
         element: el,
-        anchor: 'bottom',  // This ensures the marker points to the exact location
+        anchor: 'bottom',
       })
         .setLngLat([location.longitude, location.latitude])
         .setPopup(popup)
         .addTo(map.current);
 
-      // Show popup by default to display the label
-      marker.togglePopup();
-
       // Add event listeners to the popup buttons after popup is open
       marker.getPopup().on('open', () => {
         setTimeout(() => {
+          // Show Amenities button handler
+          const showAmenitiesBtn = document.querySelector('.show-amenities-btn');
+          if (showAmenitiesBtn) {
+            showAmenitiesBtn.addEventListener('click', () => {
+              if (!location.amenities || Object.keys(location.amenities).length === 0) {
+                console.warn("No amenities data available for this location");
+                alert("No amenity data available for this location");
+                return;
+              }
+              addAmenityMarkers(location.amenities, {lon: location.longitude, lat: location.latitude});
+            });
+          }
+
           // Set Start Point button handler
           const setStartBtn = document.querySelector('.set-start-btn');
           if (setStartBtn) {
@@ -1558,101 +1572,149 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
     };
   }, [locations, savedLocations, savedPostcodes, lng, lat, zoom]);
 
+  // Update saved postcode markers
   useEffect(() => {
     if (!map.current || !savedPostcodes) return;
 
-    console.log('Updating saved postcode markers:', savedPostcodes);
+    console.log("Updating saved postcode markers:", savedPostcodes);
 
-    // Clear existing saved markers
-    markersRef.current.saved.forEach(marker => marker.remove());
-    markersRef.current.saved = [];
+    // Remove existing markers
+    if (savedPostcodeMarkers.current) {
+      savedPostcodeMarkers.current.forEach(marker => marker.remove());
+      savedPostcodeMarkers.current = [];
+    }
 
-    // Add new markers
     savedPostcodes.forEach(location => {
-      if (!location.latitude || !location.longitude) {
-        console.warn('Invalid location data:', location);
+      // Log each location for debugging
+      console.log("Processing location:", location);
+
+      // Check for both formats of coordinates (lat/lng and latitude/longitude)
+      const latitude = location.lat || location.latitude;
+      const longitude = location.lng || location.longitude;
+
+      if (!latitude || !longitude) {
+        console.warn("Missing coordinates for location:", location);
         return;
       }
 
-      const el = document.createElement('div');
-      el.className = 'saved-location-marker';
+      // Create marker element
+      const markerElement = document.createElement('div');
+      markerElement.className = 'saved-location-marker';
       
-      const popup = new mapboxgl.Popup({ offset: 25 })
-        .setHTML(`
-          <div class="popup-content">
-            <h3>${location.label}</h3>
-            <p>${location.postcode}</p>
-            <div class="popup-actions">
-              <div class="routing-buttons">
-                <button class="set-start-btn" data-lat="${location.latitude}" data-lon="${location.longitude}">Set as Start Point</button>
-                <button class="set-end-btn" data-lat="${location.latitude}" data-lon="${location.longitude}">Set as End Point</button>
-              </div>
-              ${selectedStartMarker || selectedEndMarker ? `
-                <button class="clear-route-btn">Clear Route</button>
-              ` : ''}
+      // Create popup
+      const popup = new mapboxgl.Popup({ 
+        offset: 25,
+        className: 'custom-popup'
+      })
+      .setHTML(`
+        <div class="popup-content">
+          <h3>${location.label || 'Saved Location'}</h3>
+          <p>${location.postcode}</p>
+          <div class="popup-actions">
+            <button class="show-amenities-btn">Show Amenities on Map</button>
+            <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank" rel="noopener noreferrer" class="maps-link">
+              View on Google Maps
+            </a>
+            <div class="routing-buttons">
+              <button class="set-start-btn" data-lat="${latitude}" data-lon="${longitude}">Set as Start Point</button>
+              <button class="set-end-btn" data-lat="${latitude}" data-lon="${longitude}">Set as End Point</button>
             </div>
+            ${selectedStartMarker || selectedEndMarker ? `
+              <button class="clear-route-btn">Clear Route</button>
+            ` : ''}
           </div>
-        `);
+        </div>
+      `);
 
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([location.longitude, location.latitude])
+      // Create and add marker
+      const marker = new mapboxgl.Marker(markerElement)
+        .setLngLat([longitude, latitude])
         .setPopup(popup)
         .addTo(map.current);
 
-      // Add event listeners to the popup buttons
+      // Add event listeners to the popup buttons after popup is open
       marker.getPopup().on('open', () => {
-        const setStartBtn = popup.getElement().querySelector('.set-start-btn');
-        const setEndBtn = popup.getElement().querySelector('.set-end-btn');
-        const clearRouteBtn = popup.getElement().querySelector('.clear-route-btn');
+        setTimeout(() => {
+          // Show Amenities button handler
+          const showAmenitiesBtn = document.querySelector('.show-amenities-btn');
+          if (showAmenitiesBtn) {
+            showAmenitiesBtn.addEventListener('click', () => {
+              if (!location.amenities || Object.keys(location.amenities).length === 0) {
+                console.warn("No amenities data available for this location");
+                alert("No amenity data available for this location");
+                return;
+              }
+              addAmenityMarkers(location.amenities, {lon: longitude, lat: latitude});
+            });
+          }
 
-        if (setStartBtn) {
-          setStartBtn.addEventListener('click', () => {
-            const lat = parseFloat(setStartBtn.dataset.lat);
-            const lon = parseFloat(setStartBtn.dataset.lon);
-            if (selectedStartMarker) {
-              selectedStartMarker.marker.getElement().style.border = '';
-            }
-            setSelectedStartMarker({ marker, coords: { lat, lon } });
-            marker.getElement().style.border = '3px solid #ff0000';
-            marker.getPopup().remove(); // Close popup after selecting
-          });
-        }
+          // Set Start Point button handler
+          const setStartBtn = document.querySelector('.set-start-btn');
+          if (setStartBtn) {
+            setStartBtn.addEventListener('click', () => {
+              const lat = parseFloat(setStartBtn.dataset.lat);
+              const lon = parseFloat(setStartBtn.dataset.lon);
+              if (selectedStartMarker) {
+                selectedStartMarker.marker.getElement().style.border = '';
+              }
+              setSelectedStartMarker({ marker, coords: { lat, lon } });
+              marker.getElement().style.border = '3px solid #ff0000';
+              marker.getPopup().remove(); // Close the popup after selecting
+            });
+          }
 
-        if (setEndBtn) {
-          setEndBtn.addEventListener('click', () => {
-            const lat = parseFloat(setEndBtn.dataset.lat);
-            const lon = parseFloat(setEndBtn.dataset.lon);
-            if (selectedEndMarker) {
-              selectedEndMarker.marker.getElement().style.border = '';
-            }
-            setSelectedEndMarker({ marker, coords: { lat, lon } });
-            marker.getElement().style.border = '3px solid #00ff00';
-            
-            // If we have both start and end points, get the route
-            if (selectedStartMarker) {
-              displayRoute(
-                [selectedStartMarker.coords.lat, selectedStartMarker.coords.lon],
-                [lat, lon]
-              ).catch(error => {
-                console.error('Error getting directions:', error);
-                clearRoute();
-              });
-            }
-            marker.getPopup().remove(); // Close popup after selecting
-          });
-        }
+          // Set End Point button handler
+          const setEndBtn = document.querySelector('.set-end-btn');
+          if (setEndBtn) {
+            setEndBtn.addEventListener('click', () => {
+              const lat = parseFloat(setEndBtn.dataset.lat);
+              const lon = parseFloat(setEndBtn.dataset.lon);
+              if (selectedEndMarker) {
+                selectedEndMarker.marker.getElement().style.border = '';
+              }
+              setSelectedEndMarker({ marker, coords: { lat, lon } });
+              marker.getElement().style.border = '3px solid #00ff00';
+              
+              // If we have both start and end points, get the route
+              if (selectedStartMarker) {
+                displayRoute(
+                  [selectedStartMarker.coords.lat, selectedStartMarker.coords.lon],
+                  [lat, lon]
+                ).catch(error => {
+                  console.error('Error getting directions:', error);
+                  clearRoute();
+                });
+              }
+              marker.getPopup().remove(); // Close the popup after selecting
+            });
+          }
 
-        if (clearRouteBtn) {
-          clearRouteBtn.addEventListener('click', () => {
-            clearRoute();
-            marker.getPopup().remove();
-          });
-        }
+          // Clear Route button handler
+          const clearRouteBtn = document.querySelector('.clear-route-btn');
+          if (clearRouteBtn) {
+            clearRouteBtn.addEventListener('click', () => {
+              clearRoute();
+              marker.getPopup().remove(); // Close the popup after clearing
+            });
+          }
+        }, 100);
       });
 
-      markersRef.current.saved.push(marker);
+      savedPostcodeMarkers.current.push(marker);
     });
-  }, [savedPostcodes, selectedStartMarker, selectedEndMarker]);
+
+    // If we have markers, fit the map to show them all
+    if (savedPostcodeMarkers.current.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      savedPostcodeMarkers.current.forEach(marker => {
+        bounds.extend(marker.getLngLat());
+      });
+      map.current.fitBounds(bounds, {
+        padding: 50,
+        maxZoom: 15
+      });
+    }
+  }, [map.current, savedPostcodes]);
 
   // Add this handler to prevent map zoom when scrolling inside popup
   useEffect(() => {

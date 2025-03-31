@@ -27,6 +27,9 @@ function Home() {
   const { currentUser } = useAuth();
   const [savedPostcodes, setSavedPostcodes] = useState([]);
   const [travelPreferences, setTravelPreferences] = useState(null);
+  const [locationLabel, setLocationLabel] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [locationType, setLocationType] = useState("Home");
 
   console.log('savedPostcodes in Home:', savedPostcodes);
 
@@ -47,10 +50,15 @@ function Home() {
           const userData = docSnap.data();
           console.log('Loaded user data:', userData);
           setSavedPostcodes(userData.savedPostcodes || []);
+          // Load saved travel preferences
+          if (userData.travelPreferences) {
+            setTravelPreferences(userData.travelPreferences);
+          }
         } else {
           console.log('Creating new user document');
           await setDoc(userDoc, { 
             savedPostcodes: [],
+            travelPreferences: null,
             createdAt: new Date().toISOString(),
             email: currentUser.email
           });
@@ -64,17 +72,38 @@ function Home() {
   }, [currentUser]);
 
   // Handle adding a new postcode
-  const handlePostcodeSubmit = async (postcodeData) => {
+  const handlePostcodeSubmit = async () => {
     if (!currentUser) {
       alert('Please log in to save postcodes');
       return;
     }
 
+    if (!locationLabel || !postcode) {
+      alert('Please enter both a label and postcode');
+      return;
+    }
+
     try {
+      console.log('Geocoding postcode:', postcode);
+      // First, geocode the postcode
+      const response = await fetch(`https://api.postcodes.io/postcodes/${postcode}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error('Invalid postcode');
+      }
+
+      const { latitude, longitude } = data.result;
+      
       console.log('Saving postcode for user:', currentUser.uid);
       const userDoc = doc(db, 'users', currentUser.uid);
       const newPostcode = {
-        ...postcodeData,
+        id: Date.now().toString(),
+        label: locationLabel,
+        postcode: postcode,
+        type: locationType,
+        lat: latitude,
+        lng: longitude,
         timestamp: new Date().toISOString()
       };
 
@@ -83,10 +112,13 @@ function Home() {
       });
 
       setSavedPostcodes(prev => [...prev, newPostcode]);
+      setLocationLabel("");
+      setPostcode("");
+      setLocationType("Home");
       console.log('Postcode saved successfully');
     } catch (error) {
       console.error('Error saving postcode:', error);
-      alert('Error saving postcode. Please try again.');
+      alert(error.message || 'Error saving postcode. Please try again.');
     }
   };
 
@@ -142,9 +174,23 @@ function Home() {
     }
   };
 
-  const handleTravelPreferences = (preferences) => {
+  const handleTravelPreferences = async (preferences) => {
     console.log("Updating travel preferences:", preferences);
     setTravelPreferences(preferences);
+
+    // Save preferences to Firebase if user is logged in
+    if (currentUser) {
+      try {
+        const userDoc = doc(db, 'users', currentUser.uid);
+        await updateDoc(userDoc, {
+          travelPreferences: preferences
+        });
+        console.log("Travel preferences saved to Firebase");
+      } catch (error) {
+        console.error("Error saving travel preferences:", error);
+      }
+    }
+
     // Trigger new search if city is already selected
     if (selectedCity) {
       handleSearch();
@@ -230,6 +276,62 @@ function Home() {
         </div>
 
         <TravelBehaviourForm onSubmit={handleTravelPreferences} />
+
+        {currentUser && (
+          <div className="saved-locations-container">
+            <div className="add-location-form">
+              <input
+                type="text"
+                placeholder="Location label (e.g., Home)"
+                className="location-label-input"
+                value={locationLabel}
+                onChange={(e) => setLocationLabel(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Enter postcode"
+                className="postcode-input"
+                value={postcode}
+                onChange={(e) => setPostcode(e.target.value)}
+              />
+              <select 
+                className="location-type-select"
+                value={locationType}
+                onChange={(e) => setLocationType(e.target.value)}
+              >
+                <option value="Home">Home</option>
+                <option value="Work">Work</option>
+                <option value="School">School</option>
+                <option value="Other">Other</option>
+              </select>
+              <button 
+                className="add-location-btn"
+                onClick={handlePostcodeSubmit}
+              >
+                Add Location
+              </button>
+            </div>
+
+            <div className="saved-postcodes-container">
+              <h3>Saved Postcodes</h3>
+              <div className="saved-postcodes-list">
+                {savedPostcodes.map((postcode, index) => (
+                  <div key={index} className="saved-postcode-item">
+                    <span className="postcode-label">
+                      {postcode.label} - {postcode.postcode}
+                    </span>
+                    <button
+                      onClick={() => handleRemovePostcode(postcode.id)}
+                      className="remove-postcode-btn"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {isLoading && (
