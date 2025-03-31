@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import MapView from "../../components/Map/MapView";
-import SearchBar from "../../components/SearchBar/SearchBar";
-import PostcodeInput from '../../components/PostcodeInput/PostcodeInput';
-import "./Home.css";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './Home.css';
+import { MapView } from '../../components/Map/MapView';
+import { TravelBehaviourForm } from '../../components/TravelBehaviourForm/TravelBehaviourForm';
 import { auth, db } from "../../firebase";
 import { 
   doc, 
@@ -26,6 +26,7 @@ function Home() {
   const [targetPostcode, setTargetPostcode] = useState(null);
   const { currentUser } = useAuth();
   const [savedPostcodes, setSavedPostcodes] = useState([]);
+  const [travelPreferences, setTravelPreferences] = useState(null);
 
   console.log('savedPostcodes in Home:', savedPostcodes);
 
@@ -107,38 +108,50 @@ function Home() {
     }
   };
 
-  const handleSearchStart = (searchQuery) => {
-    console.log("🔍 Search started for:", searchQuery);
+  const handleSearch = async () => {
+    if (!selectedCity) {
+      setError("Please enter a city name");
+      return;
+    }
+
     setIsLoading(true);
-    setHasSearched(true);
     setError(null);
-    setSelectedCity(searchQuery);
+    setHasSearched(true);
+
+    try {
+      // Make API call without requiring travel preferences
+      const response = await axios.get(`http://localhost:5000/amenities`, {
+        params: {
+          city: selectedCity,
+          ...(travelPreferences && { travel_preferences: travelPreferences })
+        }
+      });
+
+      if (response.data && response.data.locations) {
+        processResults(response.data.locations);
+      } else {
+        setError("No results found");
+        setSearchResults([]);
+      }
+    } catch (err) {
+      console.error("Error during search:", err);
+      setError(err.response?.data?.message || "An error occurred during search");
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSearchResults = (results) => {
-    console.log("📊 Received search results in Home:", results);
-    setIsLoading(false);
-    
-    if (!results) {
-      console.error("❌ No results received");
-      setError("No results received from server");
-      setSearchResults([]);
-      return;
+  const handleTravelPreferences = (preferences) => {
+    console.log("Updating travel preferences:", preferences);
+    setTravelPreferences(preferences);
+    // Trigger new search if city is already selected
+    if (selectedCity) {
+      handleSearch();
     }
+  };
 
-    if (!Array.isArray(results)) {
-      console.error("❌ Results is not an array:", results);
-      setError("Invalid response format from server");
-      setSearchResults([]);
-      return;
-    }
-
-    if (results.length === 0) {
-      console.log("ℹ️ No results found");
-      setSearchResults([]);
-      return;
-    }
-
+  const processResults = (results) => {
     try {
       console.log("Processing results:", results);
       const processedResults = results.map((location, index) => {
@@ -154,13 +167,15 @@ function Home() {
           score: location.score || 0,
           area_name: location.area_name || "Unknown Location",
           amenities: location.amenities || {},
+          travel_scores: location.travel_scores || {},  // New field
           lat: location.lat || 0,
           lon: location.lon || 0,
           google_maps_link: location.google_maps_link || 
             `https://www.google.com/maps?q=${location.lat},${location.lon}`,
           category: location.category || "Recommended Location",
           name: location.name || `Location ${index + 1}`,
-          reason: location.reason || ""
+          reason: location.reason || "",
+          transit: location.transit || { score: 0, accessible_routes: [] }
         };
       }).filter(Boolean);
 
@@ -196,34 +211,37 @@ function Home() {
   return (
     <div className="home-page">
       <div className="hero-section">
-        <h1 className="hero-title">Find the Best Locations</h1>
+        <h1 className="hero-title">Find Your Ideal Location</h1>
         <p className="hero-subtitle">
-          Discover optimal locations based on proximity to schools, hospitals, and supermarkets
+          Discover the perfect area based on your daily activities and travel preferences
         </p>
         
         <div className="search-container">
-          <SearchBar 
-            onSearchResults={handleSearchResults}
-            onSearchStart={handleSearchStart}
+          <input
+            type="text"
+            placeholder="Enter a city name (e.g., Cardiff, UK)"
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value)}
+            className="city-input"
           />
-          <PostcodeInput 
-            onPostcodeSubmit={handlePostcodeSubmit}
-            onRemovePostcode={handleRemovePostcode}
-            savedPostcodes={savedPostcodes || []}
-            disabled={!currentUser}
-          />
+          <button onClick={handleSearch} className="search-button">
+            Search
+          </button>
         </div>
+
+        <TravelBehaviourForm onSubmit={handleTravelPreferences} />
       </div>
 
       {isLoading && (
-        <div className="loading-indicator">
-          <p>Analyzing locations in {selectedCity}...</p>
+        <div className="loading-overlay">
+          <div className="spinner"></div>
+          <p>Analyzing locations...</p>
         </div>
       )}
 
       {error && (
         <div className="error-message">
-          <p>{error}</p>
+          {error}
         </div>
       )}
 
@@ -250,6 +268,8 @@ function Home() {
                     <h3>Location {index + 1}</h3>
                     <p className="score">Score: {location.score}/100</p>
                     <p>Area: {location.area_name}</p>
+                    
+                    {/* Amenities Section */}
                     {Object.keys(location.amenities).length > 0 && (
                       <>
                         <h4>Nearby Amenities:</h4>
@@ -263,6 +283,31 @@ function Home() {
                         </ul>
                       </>
                     )}
+
+                    {/* Travel Times Section */}
+                    {Object.keys(location.travel_scores || {}).length > 0 && (
+                      <>
+                        <h4>Travel Times:</h4>
+                        <ul className="travel-list">
+                          {Object.entries(location.travel_scores).map(([type, data]) => (
+                            <li key={type}>
+                              <span className="travel-type">{type}:</span>
+                              {Math.round(data.travel_time)} mins by {data.transport_mode}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+
+                    {/* Transit Information */}
+                    {location.transit && (
+                      <div className="transit-info">
+                        <h4>Public Transport:</h4>
+                        <p>Transit Score: {location.transit.score}/100</p>
+                        <p>Bus Routes: {location.transit.accessible_routes.length}</p>
+                      </div>
+                    )}
+                    
                     <a 
                       href={location.google_maps_link} 
                       target="_blank" 
@@ -283,27 +328,27 @@ function Home() {
         <h2 className="section-title">How It Works</h2>
         <div className="features-grid">
           <div className="feature-card">
+            <div className="feature-icon">🎯</div>
+            <h3>Set Your Preferences</h3>
+            <p>Add your frequent destinations and travel habits</p>
+          </div>
+          
+          <div className="feature-card">
             <div className="feature-icon">🔍</div>
-            <h3>Search</h3>
-            <p>Enter a city name to analyze potential locations</p>
+            <h3>Smart Search</h3>
+            <p>Our algorithm analyzes travel times and amenities</p>
           </div>
           
           <div className="feature-card">
             <div className="feature-icon">📊</div>
-            <h3>Analyze</h3>
-            <p>Our algorithm evaluates locations based on amenity proximity</p>
+            <h3>Compare Locations</h3>
+            <p>View detailed scores and travel times for each area</p>
           </div>
           
           <div className="feature-card">
-            <div className="feature-icon">🗺️</div>
-            <h3>Visualize</h3>
-            <p>View results on an interactive map with detailed information</p>
-          </div>
-          
-          <div className="feature-card">
-            <div className="feature-icon">📝</div>
-            <h3>Compare</h3>
-            <p>Compare different locations to find the best match for your needs</p>
+            <div className="feature-icon">🚌</div>
+            <h3>Transport Options</h3>
+            <p>Consider multiple transport modes for your journeys</p>
           </div>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { getDirections } from '../../services/osrmService';
 // Set Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-function MapView({ city = 'Cardiff, UK', locations = [], savedLocations = [], savedPostcodes = [], recommendations = [] }) {
+export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations = [], savedPostcodes = [], recommendations = [] }) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const recommendationMarkersRef = useRef([]);  // Separate ref for recommendation markers

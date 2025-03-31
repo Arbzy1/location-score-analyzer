@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import MapView from "../../MapView.jsx";
+import { MapView } from "../../components/Map/MapView";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import "./MapViewPage.css";
 

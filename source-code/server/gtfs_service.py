@@ -95,6 +95,55 @@ class GTFSService:
         
         return round(route_score + distance_score, 1)
 
+    def calculate_transit_time(self, origin_lat, origin_lon, dest_lat, dest_lon, max_walking_distance=500):
+        """Calculate transit time between two points using GTFS data."""
+        try:
+            # Find nearest stops to origin and destination
+            origin_stop = self.get_nearest_bus_stop(origin_lat, origin_lon, max_walking_distance)
+            dest_stop = self.get_nearest_bus_stop(dest_lat, dest_lon, max_walking_distance)
+            
+            if not origin_stop or not dest_stop:
+                return None
+                
+            # Get walking times to/from stops (assuming 5km/h walking speed)
+            walking_speed = 5000/60  # meters per minute
+            origin_walk_time = origin_stop['distance'] / walking_speed
+            dest_walk_time = dest_stop['distance'] / walking_speed
+            
+            # Find trips that serve both stops
+            origin_stop_times = self.stop_times_df[self.stop_times_df['stop_id'] == origin_stop['stop_id']]
+            dest_stop_times = self.stop_times_df[self.stop_times_df['stop_id'] == dest_stop['stop_id']]
+            
+            common_trips = pd.merge(
+                origin_stop_times[['trip_id', 'arrival_time']],
+                dest_stop_times[['trip_id', 'arrival_time']],
+                on='trip_id',
+                suffixes=('_origin', '_dest')
+            )
+            
+            if common_trips.empty:
+                return None
+                
+            # Calculate transit time for each trip
+            common_trips['transit_time'] = pd.to_datetime(common_trips['arrival_time_dest']) - pd.to_datetime(common_trips['arrival_time_origin'])
+            min_transit_time = common_trips['transit_time'].min()
+            
+            if pd.isna(min_transit_time):
+                return None
+                
+            # Convert timedelta to minutes and add walking times
+            total_time = min_transit_time.total_seconds() / 60 + origin_walk_time + dest_walk_time
+            
+            # Add average wait time (half the typical bus frequency)
+            avg_wait_time = 10  # minutes
+            total_time += avg_wait_time
+            
+            return round(total_time, 1)
+            
+        except Exception as e:
+            print(f"Error calculating transit time: {str(e)}")
+            return None
+
     def get_routes_geojson(self):
         """Convert routes and stops to GeoJSON format"""
         # Create stops GeoJSON

@@ -1,0 +1,157 @@
+.travel-behaviour-form {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+.toggle-form-btn {
+  width: 100%;
+  padding: 1rem;
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.toggle-form-btn:hover {
+  background-color: #3182ce;
+}
+
+.form-description {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.form-description h3 {
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.form-description p {
+  color: #4a5568;
+}
+
+.location-entry {
+  background-color: #f7fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.location-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.location-header h4 {
+  color: #2d3748;
+  margin: 0;
+}
+
+.remove-btn {
+  background-color: #fc8181;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.remove-btn:hover {
+  background-color: #f56565;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #4a5568;
+  font-size: 0.875rem;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 1rem;
+  color: #2d3748;
+  background-color: white;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.add-location-btn,
+.submit-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-location-btn {
+  background-color: #48bb78;
+  color: white;
+  flex: 1;
+}
+
+.add-location-btn:hover {
+  background-color: #38a169;
+}
+
+.submit-btn {
+  background-color: #4299e1;
+  color: white;
+  flex: 1;
+}
+
+.submit-btn:hover {
+  background-color: #3182ce;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .add-location-btn,
+  .submit-btn {
+    width: 100%;
+  }
+} 

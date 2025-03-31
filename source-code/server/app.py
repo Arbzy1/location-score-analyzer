@@ -142,7 +142,7 @@ def get_area_names(bbox):
         print(f"⚠️ Error retrieving area names: {e}")
         return []
 
-def analyze_location(city):
+def analyze_location(city, travel_preferences=None):
     print(f"🔍 Starting analysis for {city}...")
     
     try:
@@ -185,7 +185,8 @@ def analyze_location(city):
                 "lon": pt.x,
                 "category": "Recommended Location",
                 "amenities": {},
-                "score": 0
+                "score": 0,
+                "travel_scores": {}  # New field for travel-related scores
             }
             
             # Initialize scores for each category
@@ -193,14 +194,15 @@ def analyze_location(city):
                 "school": 0,
                 "hospital": 0,
                 "supermarket": 0,
-                "transit": 0
+                "transit": 0,
+                "travel": 0  # New category for travel behavior
             }
             
-            # Calculate amenity scores
+            # Calculate amenity scores (30% of total)
             amenities_data = {
-                "school": (schools, 1000, 0.3),      # 30% weight, 1000m threshold
-                "hospital": (hospitals, 2000, 0.3),   # 30% weight, 2000m threshold
-                "supermarket": (supermarkets, 1000, 0.2)  # 20% weight, 1000m threshold
+                "school": (schools, 1000, 0.15),      # 15% weight
+                "hospital": (hospitals, 2000, 0.15),   # 15% weight
+                "supermarket": (supermarkets, 1000, 0.1)  # 10% weight
             }
             
             for a_type, (gdf, threshold, weight) in amenities_data.items():
@@ -224,24 +226,73 @@ def analyze_location(city):
                                 "distance": int(distance)
                             }
             
-            # Calculate transit score (0-1)
+            # Calculate transit score (20% of total)
             transit_score = gtfs_service.calculate_transit_score(pt.y, pt.x) / 100
             amenity_scores["transit"] = transit_score
             
             # Get accessible routes
             accessible_routes = gtfs_service.get_route_accessibility(pt.y, pt.x)
             location_data["transit"] = {
-                "score": transit_score * 100,  # Convert back to 0-100 for display
+                "score": transit_score * 100,
                 "accessible_routes": accessible_routes
             }
             
+            # Calculate travel behavior score (40% of total)
+            if travel_preferences:
+                travel_score = 0
+                total_frequency = sum(loc["frequency"] for loc in travel_preferences)
+                
+                for pref in travel_preferences:
+                    try:
+                        # Get coordinates from postcode
+                        coords = get_coordinates_from_postcode(pref["postcode"])
+                        if coords:
+                            # Calculate travel time based on transport mode
+                            if pref["transportMode"] == "bus":
+                                # Use GTFS for bus travel time
+                                travel_time = gtfs_service.calculate_transit_time(
+                                    pt.y, pt.x, coords["lat"], coords["lon"]
+                                )
+                            else:
+                                # Use OSRM for other modes
+                                travel_time = calculate_travel_time(
+                                    (pt.y, pt.x),
+                                    (coords["lat"], coords["lon"]),
+                                    mode=pref["transportMode"]
+                                )
+                            
+                            # Normalize travel time (0-1 score, lower time = higher score)
+                            max_acceptable_time = 60  # minutes
+                            time_score = max(0, (max_acceptable_time - travel_time) / max_acceptable_time)
+                            
+                            # Weight by visit frequency
+                            weighted_score = time_score * (pref["frequency"] / total_frequency)
+                            travel_score += weighted_score
+                            
+                            # Store travel details
+                            location_data["travel_scores"][pref["type"]] = {
+                                "travel_time": travel_time,
+                                "score": time_score * 100,
+                                "transport_mode": pref["transportMode"]
+                            }
+                    except Exception as e:
+                        print(f"Error calculating travel score: {str(e)}")
+                        continue
+                
+                amenity_scores["travel"] = travel_score
+            
             # Calculate final weighted score (0-100)
             final_score = (
-                amenity_scores["school"] * 30 +      # 30% weight
-                amenity_scores["hospital"] * 30 +     # 30% weight
-                amenity_scores["supermarket"] * 20 +  # 20% weight
-                amenity_scores["transit"] * 20        # 20% weight
+                amenity_scores["school"] * 15 +       # 15% weight
+                amenity_scores["hospital"] * 15 +      # 15% weight
+                amenity_scores["supermarket"] * 10 +   # 10% weight
+                amenity_scores["transit"] * 20 +       # 20% weight
+                (amenity_scores["travel"] * 40 if travel_preferences else 0)  # 40% weight if travel prefs exist
             )
+            
+            # If no travel preferences, scale up other scores proportionally
+            if not travel_preferences:
+                final_score = final_score * (100/60)  # Scale up to 100
             
             location_data["score"] = round(final_score, 1)
             location_data["area_name"] = find_nearest_area(pt.y, pt.x, areas)
@@ -265,12 +316,55 @@ def analyze_location(city):
             print("Amenities:", list(loc['amenities'].keys()))
             print(f"Transit Score: {loc['transit']['score']}")
             print(f"Accessible Routes: {len(loc['transit']['accessible_routes'])}")
+            if 'travel_scores' in loc:
+                print("Travel Scores:", loc['travel_scores'])
         
         return top_locations
 
     except Exception as e:
         print(f"❌ Error in analyze_location: {str(e)}\n")
         return []
+
+def calculate_travel_time(origin, destination, mode='car'):
+    """Calculate travel time between two points using OSRM."""
+    try:
+        if mode == 'car':
+            profile = 'driving'
+        elif mode == 'cycle':
+            profile = 'cycling'
+        elif mode == 'walk':
+            profile = 'walking'
+        else:
+            profile = 'driving'  # default to driving
+            
+        url = f"http://router.project-osrm.org/route/v1/{profile}/{origin[1]},{origin[0]};{destination[1]},{destination[0]}"
+        response = requests.get(url)
+        data = response.json()
+        
+        if data["code"] == "Ok" and len(data["routes"]) > 0:
+            # Convert duration from seconds to minutes
+            return data["routes"][0]["duration"] / 60
+        return None
+    except Exception as e:
+        print(f"Error calculating travel time: {str(e)}")
+        return None
+
+def get_coordinates_from_postcode(postcode):
+    """Get coordinates from a UK postcode using postcodes.io API."""
+    try:
+        url = f"https://api.postcodes.io/postcodes/{postcode}"
+        response = requests.get(url)
+        data = response.json()
+        
+        if response.status_code == 200 and data["status"] == 200:
+            return {
+                "lat": float(data["result"]["latitude"]),
+                "lon": float(data["result"]["longitude"])
+            }
+        return None
+    except Exception as e:
+        print(f"Error getting coordinates from postcode: {str(e)}")
+        return None
 
 @app.route('/amenities', methods=['GET', 'OPTIONS'])
 def get_amenities():
