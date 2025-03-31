@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './TravelBehaviourForm.css';
 
-export const TravelBehaviourForm = ({ onSubmit }) => {
+export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
   const [locations, setLocations] = useState([
     { type: 'work', postcode: '', frequency: 5, transportMode: 'bus' }
   ]);
   const [showForm, setShowForm] = useState(false);
+
+  // Load saved preferences when component mounts or when savedPreferences changes
+  useEffect(() => {
+    if (savedPreferences && savedPreferences.length > 0) {
+      setLocations(savedPreferences);
+      console.log("Loaded saved preferences:", savedPreferences);
+    }
+  }, [savedPreferences]);
 
   const locationTypes = [
     { value: 'work', label: 'Workplace' },
@@ -43,7 +51,12 @@ export const TravelBehaviourForm = ({ onSubmit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(locations);
+    // Filter out empty postcodes before submitting
+    const validLocations = locations.filter(loc => loc.postcode.trim() !== '');
+    if (validLocations.length > 0) {
+      onSubmit(validLocations);
+      console.log("Submitting travel preferences:", validLocations);
+    }
   };
 
   return (

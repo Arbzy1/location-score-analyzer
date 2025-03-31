@@ -38,6 +38,8 @@ function Home() {
     const loadUserData = async () => {
       if (!currentUser) {
         console.log('No user logged in during load');
+        setSavedPostcodes([]); // Clear saved postcodes
+        setTravelPreferences(null); // Clear travel preferences
         return;
       }
       
@@ -52,6 +54,7 @@ function Home() {
           setSavedPostcodes(userData.savedPostcodes || []);
           // Load saved travel preferences
           if (userData.travelPreferences) {
+            console.log('Loading travel preferences:', userData.travelPreferences);
             setTravelPreferences(userData.travelPreferences);
           }
         } else {
@@ -176,24 +179,62 @@ function Home() {
 
   const handleTravelPreferences = async (preferences) => {
     console.log("Updating travel preferences:", preferences);
-    setTravelPreferences(preferences);
+    
+    try {
+      // Geocode all postcodes using the same implementation as handlePostcodeSubmit
+      const geocodedPreferences = await Promise.all(
+        preferences.map(async (pref) => {
+          if (!pref.postcode) return null;
+          
+          const response = await fetch(`https://api.postcodes.io/postcodes/${pref.postcode}`);
+          const data = await response.json();
+          
+          if (!response.ok) {
+            console.error(`Failed to geocode postcode ${pref.postcode}`);
+            return null;
+          }
 
-    // Save preferences to Firebase if user is logged in
-    if (currentUser) {
-      try {
-        const userDoc = doc(db, 'users', currentUser.uid);
-        await updateDoc(userDoc, {
-          travelPreferences: preferences
-        });
-        console.log("Travel preferences saved to Firebase");
-      } catch (error) {
-        console.error("Error saving travel preferences:", error);
+          const { latitude, longitude } = data.result;
+          
+          return {
+            ...pref,
+            lat: latitude,
+            lng: longitude,
+            timestamp: new Date().toISOString()
+          };
+        })
+      );
+
+      // Filter out null results
+      const validGeocoded = geocodedPreferences.filter(pref => pref !== null);
+
+      // Save preferences to state
+      setTravelPreferences(validGeocoded);
+
+      // Save preferences to Firebase if user is logged in
+      if (currentUser) {
+        try {
+          console.log("Saving travel preferences to Firebase for user:", currentUser.uid);
+          const userDoc = doc(db, 'users', currentUser.uid);
+          await updateDoc(userDoc, {
+            travelPreferences: validGeocoded
+          });
+          console.log("Travel preferences saved successfully");
+          
+          // Trigger new search if city is already selected
+          if (selectedCity) {
+            handleSearch();
+          }
+        } catch (error) {
+          console.error("Error saving travel preferences:", error);
+          alert("Failed to save travel preferences. Please try again.");
+        }
+      } else {
+        console.log("No user logged in, preferences will not be persisted");
       }
-    }
-
-    // Trigger new search if city is already selected
-    if (selectedCity) {
-      handleSearch();
+    } catch (error) {
+      console.error("Error processing travel preferences:", error);
+      alert("Failed to process travel preferences. Please try again.");
     }
   };
 
@@ -275,7 +316,10 @@ function Home() {
           </button>
         </div>
 
-        <TravelBehaviourForm onSubmit={handleTravelPreferences} />
+        <TravelBehaviourForm 
+          onSubmit={handleTravelPreferences}
+          savedPreferences={travelPreferences}
+        />
 
         {currentUser && (
           <div className="saved-locations-container">
@@ -353,7 +397,17 @@ function Home() {
             <MapView 
               city={selectedCity} 
               locations={searchResults}
-              savedPostcodes={savedPostcodes}
+              savedPostcodes={[
+                ...savedPostcodes,
+                ...(travelPreferences?.map(pref => ({
+                  id: `travel-${pref.type}-${pref.postcode}`,
+                  label: `${pref.type} (${pref.frequency}x/week)`,
+                  postcode: pref.postcode,
+                  type: pref.type,
+                  transportMode: pref.transportMode,
+                  frequency: pref.frequency
+                })) || [])
+              ]}
             />
           </div>
 

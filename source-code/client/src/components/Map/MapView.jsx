@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapView.css';
 import { getDirections } from '../../services/osrmService';
+import { getPostcodeAmenities } from '../../services/amenityService';
 
 // Set Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -1492,13 +1493,28 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
           // Show Amenities button handler
           const showAmenitiesBtn = document.querySelector('.show-amenities-btn');
           if (showAmenitiesBtn) {
-            showAmenitiesBtn.addEventListener('click', () => {
+            showAmenitiesBtn.addEventListener('click', async () => {
               if (!location.amenities || Object.keys(location.amenities).length === 0) {
-                console.warn("No amenities data available for this location");
-                alert("No amenity data available for this location");
-                return;
+                try {
+                  // Fetch amenities for the postcode
+                  const amenities = await getPostcodeAmenities(location.postcode);
+                  if (amenities && Object.keys(amenities).length > 0) {
+                    // Update the location object with the new amenities
+                    location.amenities = amenities;
+                    // Add amenity markers to the map
+                    addAmenityMarkers(amenities, {lon: location.longitude, lat: location.latitude});
+                  } else {
+                    console.warn("No amenities data available for this location");
+                    alert("No amenity data available for this location");
+                  }
+                } catch (error) {
+                  console.error("Error fetching amenities:", error);
+                  alert("Failed to fetch amenities for this location");
+                }
+              } else {
+                // Use existing amenities data
+                addAmenityMarkers(location.amenities, {lon: location.longitude, lat: location.latitude});
               }
-              addAmenityMarkers(location.amenities, {lon: location.longitude, lat: location.latitude});
             });
           }
 
@@ -1638,13 +1654,28 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
           // Show Amenities button handler
           const showAmenitiesBtn = document.querySelector('.show-amenities-btn');
           if (showAmenitiesBtn) {
-            showAmenitiesBtn.addEventListener('click', () => {
+            showAmenitiesBtn.addEventListener('click', async () => {
               if (!location.amenities || Object.keys(location.amenities).length === 0) {
-                console.warn("No amenities data available for this location");
-                alert("No amenity data available for this location");
-                return;
+                try {
+                  // Fetch amenities for the postcode
+                  const amenities = await getPostcodeAmenities(location.postcode);
+                  if (amenities && Object.keys(amenities).length > 0) {
+                    // Update the location object with the new amenities
+                    location.amenities = amenities;
+                    // Add amenity markers to the map
+                    addAmenityMarkers(amenities, {lon: longitude, lat: latitude});
+                  } else {
+                    console.warn("No amenities data available for this location");
+                    alert("No amenity data available for this location");
+                  }
+                } catch (error) {
+                  console.error("Error fetching amenities:", error);
+                  alert("Failed to fetch amenities for this location");
+                }
+              } else {
+                // Use existing amenities data
+                addAmenityMarkers(location.amenities, {lon: longitude, lat: latitude});
               }
-              addAmenityMarkers(location.amenities, {lon: longitude, lat: latitude});
             });
           }
 
