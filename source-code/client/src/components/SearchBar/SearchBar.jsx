@@ -44,10 +44,10 @@ function SearchBar({ onSearchResults, onSearchStart }) {
       if (response.data) {
         console.group("🏙️ City Data");
         console.log("Requested city:", response.data.city);
-        console.log("Number of locations:", response.data.locations?.length || 0);
+        console.log("Number of locations:", Array.isArray(response.data.locations) ? response.data.locations.length : 0);
         console.groupEnd();
 
-        if (response.data.locations) {
+        if (Array.isArray(response.data.locations) && response.data.locations.length > 0) {
           console.group("📍 Location Details");
           response.data.locations.forEach((location, index) => {
             console.group(`Location ${index + 1}`);
@@ -56,14 +56,16 @@ function SearchBar({ onSearchResults, onSearchStart }) {
             console.log("Coordinates:", { lat: location.lat, lon: location.lon });
             console.log("Category:", location.category);
             console.log("Amenities:", location.amenities);
+            console.log("Transit:", location.transit);
             console.groupEnd();
           });
           console.groupEnd();
           
           onSearchResults(response.data.locations);
         } else {
-          console.error("❌ No locations array in response:", response.data);
+          console.log("ℹ️ No locations found in response");
           onSearchResults([]);
+          setError("No locations found for this search. Try a different city.");
         }
       } else {
         console.error("❌ Invalid response structure:", response.data);
