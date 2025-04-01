@@ -1657,7 +1657,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
         .addTo(map.current);
 
       // Add event listeners to the popup buttons after popup is open
-      marker.getElement().addEventListener('click', () => {
+      marker.getPopup().on('open', () => {
         setTimeout(() => {
           const showAmenitiesBtn = document.querySelector('.show-amenities-btn');
           const mapsLink = document.querySelector('.maps-link');
