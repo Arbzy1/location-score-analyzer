@@ -31,7 +31,7 @@
   border: 2px solid white;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 /* Different colors for different types */
@@ -39,6 +39,41 @@
 .saved-location-marker[data-type="work"] { background-color: #d32f2f; }
 .saved-location-marker[data-type="school"] { background-color: #388e3c; }
 .saved-location-marker[data-type="other"] { background-color: #7b1fa2; }
+
+/* Travel preference markers */
+.travel-preference-marker {
+  width: 20px;
+  height: 20px;
+  background-color: #48bb78;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.travel-preference-marker::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 2px solid #48bb78;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
 
 /* Popup styles */
 .mapboxgl-popup {

@@ -405,7 +405,9 @@ function Home() {
                   postcode: pref.postcode,
                   type: pref.type,
                   transportMode: pref.transportMode,
-                  frequency: pref.frequency
+                  frequency: pref.frequency,
+                  lat: pref.lat,
+                  lng: pref.lng
                 })) || [])
               ]}
             />
