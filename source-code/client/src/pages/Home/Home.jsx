@@ -30,6 +30,7 @@ function Home() {
   const [locationLabel, setLocationLabel] = useState("");
   const [postcode, setPostcode] = useState("");
   const [locationType, setLocationType] = useState("Home");
+  const [showScoreExplanation, setShowScoreExplanation] = useState(false);
 
   console.log('savedPostcodes in Home:', savedPostcodes);
 
@@ -420,13 +421,256 @@ function Home() {
           ) : (
             <div className="results-section">
               <h2>Top {searchResults.length} Locations in {selectedCity.split(',')[0]}</h2>
+              
+              {/* Score Explanation Toggle Button */}
+              <div className="score-explanation-toggle">
+                <button 
+                  onClick={() => setShowScoreExplanation(!showScoreExplanation)}
+                  className="toggle-explanation-btn"
+                >
+                  {showScoreExplanation ? 'Hide Score Explanation' : 'Show Score Explanation'}
+                </button>
+              </div>
+              
+              {/* Score Explanation Box */}
+              {showScoreExplanation && (
+                <div className="score-explanation-box">
+                  <h3>How We Calculate Scores</h3>
+                  <div className="score-breakdown">
+                    <div className="score-component">
+                      <h4>Amenities (30%)</h4>
+                      <ul>
+                        <li>Schools (15%): Based on distance to nearest school</li>
+                        <li>Hospitals (15%): Based on distance to nearest hospital</li>
+                        <li>Supermarkets (10%): Based on distance to nearest supermarket</li>
+                      </ul>
+                    </div>
+                    <div className="score-component">
+                      <h4>Public Transport (20%)</h4>
+                      <ul>
+                        <li>Based on number of accessible bus routes</li>
+                        <li>Distance to nearest bus stop</li>
+                      </ul>
+                    </div>
+                    <div className="score-component">
+                      <h4>Travel Behavior (40%)</h4>
+                      <ul>
+                        <li>Calculated using real driving times from OSRM</li>
+                        <li>Weighted by visit frequency (more frequent trips have higher impact)</li>
+                        <li>Formula: Score = max(0, (120 - total_penalty) / 120)</li>
+                        <li>Where penalty = sum(frequency_weight × travel_time) for each destination</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <p className="score-note">* If no travel preferences are set, the score is scaled up proportionally.</p>
+                </div>
+              )}
+              
               <div className="location-cards">
                 {searchResults.map((location, index) => (
                   <div key={index} className="location-card">
                     <h3>Location {index + 1}</h3>
-                    <p className="score">Score: {location.score}/100</p>
+                    <div className="score-container">
+                      <p className="score">Score: {location.score}/100</p>
+                      <button 
+                        className="score-info-btn"
+                        onClick={() => setShowScoreExplanation(true)}
+                        title="Learn how this score is calculated"
+                      >
+                        <span className="info-icon">ⓘ</span>
+                      </button>
+                    </div>
                     <p>Area: {location.area_name}</p>
                     
+                    {/* Travel Time Summary Box */}
+                    {Object.keys(location.travel_scores || {}).length > 0 && (
+                      <div className="travel-summary-box">
+                        <h4>Travel Time Summary</h4>
+                        <div className="travel-metrics">
+                          <div className="metric">
+                            <span className="metric-label">Total Weekly Travel:</span>
+                            <span className="metric-value">
+                              {Math.round(Object.values(location.travel_scores)
+                                .reduce((total, data) => total + (data.travel_time * data.frequency), 0))} mins
+                            </span>
+                          </div>
+                          <div className="metric">
+                            <span className="metric-label">Average Daily Travel:</span>
+                            <span className="metric-value">
+                              {Math.round(Object.values(location.travel_scores)
+                                .reduce((total, data) => total + (data.travel_time * data.frequency), 0) / 5)} mins
+                            </span>
+                          </div>
+                          <div className="metric">
+                            <span className="metric-label">Travel Score Impact:</span>
+                            <span className="metric-value">
+                              {(() => {
+                                const dailyTime = Object.values(location.travel_scores)
+                                  .reduce((total, data) => total + (data.travel_time * data.frequency), 0) / 5;
+                                const scoreImpact = Math.round(Math.max(0, (120 - dailyTime) / 120 * 40));
+                                return `${scoreImpact}/40 points`;
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="travel-destinations">
+                          <h5>Individual Journeys:</h5>
+                          <ul>
+                            {Object.entries(location.travel_scores).map(([type, data]) => (
+                              <li key={type}>
+                                <strong>{type}:</strong> {Math.round(data.travel_time)} mins × {data.frequency} times/week = 
+                                {Math.round(data.travel_time * data.frequency)} mins/week
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Score Breakdown Section */}
+                    <div className="score-breakdown-card">
+                      <h4>Score Breakdown:</h4>
+                      
+                      {/* Travel Behavior Score - Now First */}
+                      {Object.keys(location.travel_scores || {}).length > 0 && (
+                        <div className="breakdown-component">
+                          <h5>Travel Behavior Score (40% weight):</h5>
+                          <div className="travel-score-details">
+                            {(() => {
+                              const totalWeeklyTime = Object.values(location.travel_scores)
+                                .reduce((total, data) => total + (data.travel_time * data.frequency), 0);
+                              const dailyTime = totalWeeklyTime / 5;
+                              const travelScore = Math.max(0, (120 - dailyTime) / 120 * 40);
+                              
+                              return (
+                                <>
+                                  <div className="travel-score-summary">
+                                    <p className="daily-travel">Daily Travel Time: {Math.round(dailyTime)} mins</p>
+                                    <p className="travel-score">Score: {Math.round(travelScore)}/40 points</p>
+                                    <p className="travel-explanation">
+                                      {dailyTime > 120 
+                                        ? "⚠️ Daily travel time exceeds 120 minutes target" 
+                                        : `✓ Within ${Math.round(120 - dailyTime)} minutes of daily target`}
+                                    </p>
+                                  </div>
+                                  <div className="travel-details-list">
+                                    <h6>Journey Details:</h6>
+                                    <ul>
+                                      {Object.entries(location.travel_scores).map(([type, data]) => (
+                                        <li key={type} className="journey-detail">
+                                          <div className="journey-header">
+                                            <strong>{type}</strong>
+                                            <span className="journey-frequency">{data.frequency}x per week</span>
+                                          </div>
+                                          <div className="journey-stats">
+                                            <span>Single trip: {Math.round(data.travel_time)} mins</span>
+                                            <span>Weekly total: {Math.round(data.travel_time * data.frequency)} mins</span>
+                                            <span>Daily impact: {Math.round(data.travel_time * data.frequency / 5)} mins</span>
+                                          </div>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Amenities Score */}
+                      <div className="breakdown-component">
+                        <h5>Amenities Score (30% weight):</h5>
+                        <ul>
+                          {Object.entries(location.amenities).map(([type, amenity]) => {
+                            const weight = type === 'school' ? 15 : type === 'hospital' ? 15 : 10;
+                            const maxDistance = type === 'hospital' ? 2000 : 1000;
+                            const score = (Math.max(0, maxDistance - amenity.distance) / maxDistance) * weight;
+                            return (
+                              <li key={type}>
+                                <div className="amenity-score-detail">
+                                  <span className="breakdown-label">{type}:</span>
+                                  <div className="amenity-stats">
+                                    <span>{amenity.distance}m away</span>
+                                    <span className="score-contribution">Score: {score.toFixed(1)}/{weight}</span>
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+
+                      {/* Transit Score */}
+                      <div className="breakdown-component">
+                        <h5>Public Transport Score (20% weight):</h5>
+                        <div className="transit-score-detail">
+                          <div className="transit-stats">
+                            <p>Transit Score: {location.transit.score}/100</p>
+                            <p>Available Routes: {location.transit.accessible_routes.length}</p>
+                          </div>
+                          <p className="score-contribution">
+                            Score: {(location.transit.score * 0.2).toFixed(1)}/20
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Final Score Summary */}
+                      <div className="final-score-summary">
+                        <h5>Total Score Breakdown:</h5>
+                        <div className="score-components">
+                          <div className="score-component-item">
+                            <span>Travel (40%):</span>
+                            <span>
+                              {Object.keys(location.travel_scores || {}).length > 0 ? (
+                                Math.round(
+                                  Math.max(
+                                    0,
+                                    (120 - Object.values(location.travel_scores)
+                                      .reduce(
+                                        (total, data) => 
+                                          total + (data.travel_time * data.frequency),
+                                        0
+                                      ) / 5
+                                    ) / 120 * 40
+                                  )
+                                )
+                              ) : (
+                                // When no travel preferences are set, show the remaining score
+                                (location.score - 
+                                  // Subtract known scores (amenities and transit)
+                                  (Object.entries(location.amenities).reduce((total, [type, amenity]) => {
+                                    const weight = type === 'school' ? 15 : type === 'hospital' ? 15 : 10;
+                                    const maxDistance = type === 'hospital' ? 2000 : 1000;
+                                    return total + (Math.max(0, maxDistance - amenity.distance) / maxDistance) * weight;
+                                  }, 0) + 
+                                  (location.transit.score * 0.2))
+                                ).toFixed(1)
+                              )}
+                            </span>
+                          </div>
+                          <div className="score-component-item">
+                            <span>Amenities (30%):</span>
+                            <span>
+                              {Object.entries(location.amenities).reduce((total, [type, amenity]) => {
+                                const weight = type === 'school' ? 15 : type === 'hospital' ? 15 : 10;
+                                const maxDistance = type === 'hospital' ? 2000 : 1000;
+                                return total + (Math.max(0, maxDistance - amenity.distance) / maxDistance) * weight;
+                              }, 0).toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="score-component-item">
+                            <span>Transit (20%):</span>
+                            <span>{(location.transit.score * 0.2).toFixed(1)}</span>
+                          </div>
+                          <div className="total-score">
+                            <span>Final Score:</span>
+                            <span>{location.score}/100</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Amenities Section */}
                     {Object.keys(location.amenities).length > 0 && (
                       <>
@@ -445,15 +689,25 @@ function Home() {
                     {/* Travel Times Section */}
                     {Object.keys(location.travel_scores || {}).length > 0 && (
                       <>
-                        <h4>Travel Times:</h4>
+                        <h4>Travel Analysis:</h4>
                         <ul className="travel-list">
                           {Object.entries(location.travel_scores).map(([type, data]) => (
                             <li key={type}>
                               <span className="travel-type">{type}:</span>
-                              {Math.round(data.travel_time)} mins by {data.transport_mode}
+                              <div className="travel-details">
+                                <span className="travel-time">{Math.round(data.travel_time)} mins</span>
+                                <span className="travel-frequency">({data.frequency}x/week)</span>
+                                <span className="travel-mode">by {data.transport_mode}</span>
+                              </div>
                             </li>
                           ))}
                         </ul>
+                        <div className="travel-summary">
+                          <p>Total daily travel time: {
+                            Math.round(Object.values(location.travel_scores)
+                              .reduce((total, data) => total + (data.travel_time * data.frequency), 0) / 5
+                          )} mins (avg)</p>
+                        </div>
                       </>
                     )}
 

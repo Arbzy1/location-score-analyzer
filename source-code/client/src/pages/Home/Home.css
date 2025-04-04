@@ -378,4 +378,538 @@
   .map-section {
     padding: 1rem 0;
   }
+}
+
+.travel-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+
+.travel-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.travel-type {
+  font-weight: 600;
+  color: #2d3748;
+  text-transform: capitalize;
+}
+
+.travel-details {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  color: #4a5568;
+}
+
+.travel-time {
+  font-weight: 500;
+  color: #2b6cb0;
+}
+
+.travel-frequency {
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.travel-mode {
+  color: #718096;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+}
+
+.travel-summary {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #ebf8ff;
+  border-radius: 0.375rem;
+  border: 1px solid #bee3f8;
+}
+
+.travel-summary p {
+  margin: 0;
+  color: #2c5282;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Score Explanation Box */
+.score-explanation-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.score-explanation-box h3 {
+  color: #2d3748;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.score-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.score-component {
+  background-color: white;
+  border-radius: 6px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.score-component h4 {
+  color: #4299e1;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.score-component ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.score-component li {
+  color: #4a5568;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.score-component li:before {
+  content: "•";
+  color: #4299e1;
+  position: absolute;
+  left: 0;
+}
+
+.score-note {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #718096;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Responsive adjustments for score explanation */
+@media (max-width: 768px) {
+  .score-breakdown {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Score Explanation Toggle */
+.score-explanation-toggle {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.toggle-explanation-btn {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-explanation-btn:hover {
+  background-color: #3182ce;
+}
+
+/* Score Info Button */
+.score-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-info-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.score-info-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.info-icon {
+  color: #4299e1;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+/* Score Breakdown Card */
+.score-breakdown-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.score-breakdown-card h4 {
+  color: #2d3748;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #4299e1;
+  padding-bottom: 0.5rem;
+}
+
+.breakdown-component {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.breakdown-component h5 {
+  color: #4299e1;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.breakdown-component ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.breakdown-component li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.breakdown-label {
+  color: #4a5568;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.breakdown-detail {
+  color: #718096;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.travel-breakdown {
+  width: 100%;
+}
+
+.breakdown-details {
+  margin-left: 1rem;
+  margin-top: 0.5rem;
+}
+
+.breakdown-details p {
+  color: #718096;
+  font-size: 0.9rem;
+  margin: 0.25rem 0;
+}
+
+.travel-impact-summary {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #ebf8ff;
+  border-radius: 4px;
+  border: 1px solid #bee3f8;
+}
+
+.total-travel-time {
+  color: #2b6cb0;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.score-impact {
+  color: #2c5282;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Travel Summary Box */
+.travel-summary-box {
+  background-color: #ebf8ff;
+  border: 1px solid #bee3f8;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+}
+
+.travel-summary-box h4 {
+  color: #2b6cb0;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.travel-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric {
+  background-color: white;
+  padding: 0.75rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.metric-label {
+  display: block;
+  color: #4a5568;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.metric-value {
+  display: block;
+  color: #2b6cb0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.travel-destinations {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.travel-destinations h5 {
+  color: #2d3748;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.travel-destinations ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.travel-destinations li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  color: #4a5568;
+  font-size: 0.95rem;
+}
+
+.travel-destinations li:last-child {
+  border-bottom: none;
+}
+
+.travel-destinations strong {
+  color: #2d3748;
+  text-transform: capitalize;
+}
+
+/* Travel Score Details */
+.travel-score-details {
+  padding: 1rem;
+  background-color: white;
+  border-radius: 6px;
+}
+
+.travel-score-summary {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f0f9ff;
+  border-radius: 6px;
+  border: 1px solid #bae6fd;
+}
+
+.daily-travel {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 0.5rem;
+}
+
+.travel-score {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0284c7;
+  margin-bottom: 0.5rem;
+}
+
+.travel-explanation {
+  font-size: 0.9rem;
+  color: #0c4a6e;
+}
+
+.travel-details-list h6 {
+  color: #0f172a;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.journey-detail {
+  background-color: #f8fafc;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.journey-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.journey-header strong {
+  color: #0f172a;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.journey-frequency {
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.journey-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.journey-stats span {
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+/* Amenity Score Details */
+.amenity-score-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: #f8fafc;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.amenity-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.score-contribution {
+  color: #0284c7;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Transit Score Details */
+.transit-score-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 6px;
+}
+
+.transit-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.transit-stats p {
+  margin: 0;
+  color: #334155;
+}
+
+/* Final Score Summary */
+.final-score-summary {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #f0f9ff;
+  border-radius: 6px;
+  border: 1px solid #bae6fd;
+}
+
+.score-components {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.score-component-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.score-component-item span:first-child {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.score-component-item span:last-child {
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.total-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #0284c7;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+.total-score span {
+  color: white;
+  font-weight: 600;
+}
+
+.total-score span:last-child {
+  font-size: 1.2rem;
 } 

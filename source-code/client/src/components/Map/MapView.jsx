@@ -1483,6 +1483,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
       const marker = new mapboxgl.Marker({
         element: el,
         anchor: 'bottom',
+        offset: [0, 0]
       })
         .setLngLat([location.longitude, location.latitude])
         .setPopup(popup)
@@ -1651,7 +1652,11 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
       `);
 
       // Create and add marker
-      const marker = new mapboxgl.Marker(markerElement)
+      const marker = new mapboxgl.Marker({
+        element: markerElement,
+        anchor: 'bottom',
+        offset: [0, 0]
+      })
         .setLngLat([longitude, latitude])
         .setPopup(popup)
         .addTo(map.current);
