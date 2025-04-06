@@ -175,6 +175,21 @@ def analyze_location(city, travel_preferences=None):
         # Get area names
         areas = get_area_names(city_gdf.total_bounds)
 
+        # Get amenity weights from travel preferences or use defaults
+        amenity_weights = {
+            "school": 15,
+            "hospital": 15,
+            "supermarket": 10
+        }
+        
+        if travel_preferences and 'amenityWeights' in travel_preferences:
+            print("Using custom amenity weights:", travel_preferences['amenityWeights'])
+            amenity_weights = travel_preferences['amenityWeights']
+            
+        # Calculate the total weight of amenities
+        total_amenity_weight = sum(amenity_weights.values())
+        print(f"Total amenity weight: {total_amenity_weight}%")
+        
         # Process locations
         print("📊 Processing amenity data...")
         locations = []
@@ -198,14 +213,14 @@ def analyze_location(city, travel_preferences=None):
                 "travel": 0  # New category for travel behavior
             }
             
-            # Calculate amenity scores (30% of total)
+            # Calculate amenity scores with custom weights
             amenities_data = {
-                "school": (schools, 1000, 0.15),      # 15% weight
-                "hospital": (hospitals, 2000, 0.15),   # 15% weight
-                "supermarket": (supermarkets, 1000, 0.1)  # 10% weight
+                "school": (schools, 1000),      # 1km threshold
+                "hospital": (hospitals, 2000),   # 2km threshold
+                "supermarket": (supermarkets, 1000)  # 1km threshold
             }
             
-            for a_type, (gdf, threshold, weight) in amenities_data.items():
+            for a_type, (gdf, threshold) in amenities_data.items():
                 if not gdf.empty:
                     distance, nearest = get_nearest_amenity(pt, gdf)
                     if distance is not None:
@@ -238,11 +253,11 @@ def analyze_location(city, travel_preferences=None):
             }
             
             # Calculate travel behavior score (40% of total)
-            if travel_preferences:
+            if travel_preferences and 'locations' in travel_preferences:
                 total_penalty = 0
-                total_frequency = sum(loc["frequency"] for loc in travel_preferences)
+                total_frequency = sum(loc["frequency"] for loc in travel_preferences['locations'])
                 
-                for pref in travel_preferences:
+                for pref in travel_preferences['locations']:
                     try:
                         # Get coordinates from postcode
                         coords = get_coordinates_from_postcode(pref["postcode"])
@@ -277,18 +292,43 @@ def analyze_location(city, travel_preferences=None):
                 travel_score = max(0, (max_acceptable_time - total_penalty) / max_acceptable_time)
                 amenity_scores["travel"] = travel_score
             
-            # Calculate final weighted score (0-100)
+            # Calculate amenity scores with proper weighting
+            # Only include amenities with non-zero weights
+            amenity_score = 0
+            amenity_breakdown = {}
+            
+            for a_type in ["school", "hospital", "supermarket"]:
+                weight = amenity_weights[a_type]
+                if weight > 0:  # Only include amenities with non-zero weights
+                    score = amenity_scores[a_type] * weight
+                    amenity_score += score
+                    amenity_breakdown[a_type] = score
+                else:
+                    amenity_breakdown[a_type] = 0
+            
+            # Calculate final score with proper weighting
             final_score = (
-                amenity_scores["school"] * 15 +       # 15% weight
-                amenity_scores["hospital"] * 15 +      # 15% weight
-                amenity_scores["supermarket"] * 10 +   # 10% weight
-                amenity_scores["transit"] * 20 +       # 20% weight
-                (amenity_scores["travel"] * 40 if travel_preferences else 0)  # 40% weight if travel prefs exist
+                amenity_score +  # Already weighted by custom weights
+                amenity_scores["transit"] * 20 +  # 20% weight
+                (amenity_scores["travel"] * 40 if travel_preferences and 'locations' in travel_preferences else 0)  # 40% weight if travel prefs exist
             )
             
             # If no travel preferences, scale up other scores proportionally
-            if not travel_preferences:
-                final_score = final_score * (100/60)  # Scale up to 100
+            if not travel_preferences or 'locations' not in travel_preferences:
+                scaling_factor = 100 / (total_amenity_weight + 20)  # Add 20 for transit weight
+                final_score = final_score * scaling_factor
+            
+            # Store detailed score breakdown
+            location_data["score_breakdown"] = {
+                "amenities": {
+                    "total": amenity_score,
+                    "school": amenity_breakdown["school"],
+                    "hospital": amenity_breakdown["hospital"],
+                    "supermarket": amenity_breakdown["supermarket"]
+                },
+                "transit": amenity_scores["transit"] * 20,
+                "travel": amenity_scores["travel"] * 40 if travel_preferences and 'locations' in travel_preferences else 0
+            }
             
             location_data["score"] = round(final_score, 1)
             location_data["area_name"] = find_nearest_area(pt.y, pt.x, areas)
@@ -314,6 +354,7 @@ def analyze_location(city, travel_preferences=None):
             print(f"Accessible Routes: {len(loc['transit']['accessible_routes'])}")
             if 'travel_scores' in loc:
                 print("Travel Scores:", loc['travel_scores'])
+            print("Score Breakdown:", loc['score_breakdown'])
         
         return top_locations
 

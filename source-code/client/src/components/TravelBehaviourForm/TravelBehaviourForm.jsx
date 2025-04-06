@@ -2,161 +2,201 @@ import React, { useState, useEffect } from 'react';
 import './TravelBehaviourForm.css';
 
 export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
-  const [locations, setLocations] = useState([
-    { type: 'work', postcode: '', frequency: 5, transportMode: 'bus' }
-  ]);
-  const [showForm, setShowForm] = useState(false);
+  // Initialize state with default values
+  const [locations, setLocations] = useState([]);
+  const [amenityWeights, setAmenityWeights] = useState({
+    school: 15,
+    hospital: 15,
+    supermarket: 10
+  });
+  const [showTips, setShowTips] = useState(false);
 
-  // Load saved preferences when component mounts or when savedPreferences changes
+  // Load saved preferences if they exist
   useEffect(() => {
-    if (savedPreferences && savedPreferences.length > 0) {
-      setLocations(savedPreferences);
-      console.log("Loaded saved preferences:", savedPreferences);
+    if (savedPreferences) {
+      // Handle both old format (array) and new format (object with locations and weights)
+      if (Array.isArray(savedPreferences)) {
+        setLocations(savedPreferences);
+      } else {
+        setLocations(savedPreferences.locations || []);
+        if (savedPreferences.amenityWeights) {
+          setAmenityWeights(savedPreferences.amenityWeights);
+        }
+      }
     }
   }, [savedPreferences]);
 
-  const locationTypes = [
-    { value: 'work', label: 'Workplace' },
-    { value: 'school', label: 'School/University' },
-    { value: 'gym', label: 'Gym/Sports' },
-    { value: 'shopping', label: 'Shopping Center' },
-    { value: 'leisure', label: 'Leisure/Entertainment' },
-    { value: 'family', label: 'Family/Friends' },
-    { value: 'other', label: 'Other' }
-  ];
+  // Calculate total weight
+  const totalWeight = Object.values(amenityWeights).reduce((sum, weight) => sum + weight, 0);
 
-  const transportModes = [
-    { value: 'bus', label: 'Bus' },
-    { value: 'car', label: 'Car' },
-    { value: 'walk', label: 'Walking' },
-    { value: 'cycle', label: 'Cycling' }
-  ];
-
-  const handleAddLocation = () => {
-    setLocations([
-      ...locations,
-      { type: 'work', postcode: '', frequency: 5, transportMode: 'bus' }
-    ]);
+  // Handle form submission
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Filter out empty locations
+    const validLocations = locations.filter(loc => loc.postcode && loc.type && loc.frequency);
+    onSubmit({
+      locations: validLocations,
+      amenityWeights
+    });
   };
 
-  const handleRemoveLocation = (index) => {
-    setLocations(locations.filter((_, i) => i !== index));
+  // Add a new location
+  const addLocation = () => {
+    setLocations([...locations, { postcode: '', type: 'Home', frequency: 1 }]);
   };
 
-  const handleLocationChange = (index, field, value) => {
+  // Remove a location
+  const removeLocation = (index) => {
     const newLocations = [...locations];
-    newLocations[index][field] = value;
+    newLocations.splice(index, 1);
     setLocations(newLocations);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Filter out empty postcodes before submitting
-    const validLocations = locations.filter(loc => loc.postcode.trim() !== '');
-    if (validLocations.length > 0) {
-      onSubmit(validLocations);
-      console.log("Submitting travel preferences:", validLocations);
-    }
+  // Update a location
+  const updateLocation = (index, field, value) => {
+    const newLocations = [...locations];
+    newLocations[index] = { ...newLocations[index], [field]: value };
+    setLocations(newLocations);
+  };
+
+  // Update amenity weight
+  const updateWeight = (amenity, value) => {
+    setAmenityWeights({
+      ...amenityWeights,
+      [amenity]: parseInt(value, 10)
+    });
   };
 
   return (
     <div className="travel-behaviour-form">
-      <button 
-        className="toggle-form-btn"
-        onClick={() => setShowForm(!showForm)}
-      >
-        {showForm ? 'Hide Travel Preferences' : 'Add Travel Preferences'}
-      </button>
-
-      {showForm && (
-        <form onSubmit={handleSubmit}>
-          <div className="form-description">
-            <h3>Travel Preferences</h3>
-            <p>Add locations you frequently visit to help us find the best area for you.</p>
+      <h2>Travel Preferences</h2>
+      
+      {/* Amenity Weights Section */}
+      <div className="amenity-weights-section">
+        <h3>Set Amenity Importance</h3>
+        <p>Adjust the importance of each amenity type (total: {totalWeight}%)</p>
+        
+        <div className="weight-sliders">
+          <div className="weight-slider-group">
+            <label>Schools: {amenityWeights.school}%</label>
+            <input
+              type="range"
+              min="0"
+              max="30"
+              value={amenityWeights.school}
+              onChange={(e) => updateWeight('school', e.target.value)}
+            />
           </div>
-
-          {locations.map((location, index) => (
-            <div key={index} className="location-entry">
-              <div className="location-header">
-                <h4>Location {index + 1}</h4>
-                {locations.length > 1 && (
-                  <button 
-                    type="button" 
-                    className="remove-btn"
-                    onClick={() => handleRemoveLocation(index)}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Location Type</label>
-                  <select
-                    value={location.type}
-                    onChange={(e) => handleLocationChange(index, 'type', e.target.value)}
-                  >
-                    {locationTypes.map(type => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Postcode</label>
-                  <input
-                    type="text"
-                    value={location.postcode}
-                    onChange={(e) => handleLocationChange(index, 'postcode', e.target.value)}
-                    placeholder="Enter postcode"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Visits per Week</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="7"
-                    value={location.frequency}
-                    onChange={(e) => handleLocationChange(index, 'frequency', parseInt(e.target.value))}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Transport Mode</label>
-                  <select
-                    value={location.transportMode}
-                    onChange={(e) => handleLocationChange(index, 'transportMode', e.target.value)}
-                  >
-                    {transportModes.map(mode => (
-                      <option key={mode.value} value={mode.value}>
-                        {mode.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div className="form-actions">
+          
+          <div className="weight-slider-group">
+            <label>Hospitals: {amenityWeights.hospital}%</label>
+            <input
+              type="range"
+              min="0"
+              max="30"
+              value={amenityWeights.hospital}
+              onChange={(e) => updateWeight('hospital', e.target.value)}
+            />
+          </div>
+          
+          <div className="weight-slider-group">
+            <label>Supermarkets: {amenityWeights.supermarket}%</label>
+            <input
+              type="range"
+              min="0"
+              max="30"
+              value={amenityWeights.supermarket}
+              onChange={(e) => updateWeight('supermarket', e.target.value)}
+            />
+          </div>
+        </div>
+        
+        <div className="total-weight">
+          Total Weight: {totalWeight}%
+          {totalWeight !== 40 && (
+            <span className="weight-warning">
+              Note: Total should be 40% for optimal results
+            </span>
+          )}
+        </div>
+        
+        <button 
+          type="button" 
+          className="tips-toggle"
+          onClick={() => setShowTips(!showTips)}
+        >
+          {showTips ? 'Hide Tips' : 'Show Tips'}
+        </button>
+        
+        {showTips && (
+          <div className="weight-tips">
+            <h4>How Weights Work</h4>
+            <ul>
+              <li>Higher weights mean the amenity has more impact on the final score</li>
+              <li>Total weight should be 40% (the remaining 60% is split between transit and travel time)</li>
+              <li>Set weights to 0 for amenities you don't care about</li>
+              <li>Adjust weights based on your lifestyle and priorities</li>
+            </ul>
+          </div>
+        )}
+      </div>
+      
+      {/* Locations Section */}
+      <div className="locations-section">
+        <h3>Frequent Destinations</h3>
+        <p>Add locations you visit regularly</p>
+        
+        {locations.map((location, index) => (
+          <div key={index} className="location-input">
+            <input
+              type="text"
+              placeholder="Postcode"
+              value={location.postcode}
+              onChange={(e) => updateLocation(index, 'postcode', e.target.value)}
+            />
+            <select
+              value={location.type}
+              onChange={(e) => updateLocation(index, 'type', e.target.value)}
+            >
+              <option value="Home">Home</option>
+              <option value="Work">Work</option>
+              <option value="School">School</option>
+              <option value="Other">Other</option>
+            </select>
+            <input
+              type="number"
+              min="1"
+              max="7"
+              placeholder="Times per week"
+              value={location.frequency}
+              onChange={(e) => updateLocation(index, 'frequency', parseInt(e.target.value, 10))}
+            />
             <button 
               type="button" 
-              className="add-location-btn"
-              onClick={handleAddLocation}
+              className="remove-location"
+              onClick={() => removeLocation(index)}
             >
-              Add Another Location
-            </button>
-            <button type="submit" className="submit-btn">
-              Update Preferences
+              Remove
             </button>
           </div>
-        </form>
-      )}
+        ))}
+        
+        <button 
+          type="button" 
+          className="add-location"
+          onClick={addLocation}
+        >
+          Add Location
+        </button>
+      </div>
+      
+      <button 
+        type="button" 
+        className="submit-preferences"
+        onClick={handleSubmit}
+      >
+        Save Preferences
+      </button>
     </div>
   );
 }; 

@@ -1,157 +1,255 @@
 .travel-behaviour-form {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 1rem;
-}
-
-.toggle-form-btn {
-  width: 100%;
-  padding: 1rem;
-  background-color: #4299e1;
-  color: white;
-  border: none;
+  background-color: white;
   border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  padding: 2rem;
+  margin: 2rem auto;
+  max-width: 800px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.toggle-form-btn:hover {
-  background-color: #3182ce;
-}
-
-.form-description {
-  margin: 1.5rem 0;
+.travel-behaviour-form h2 {
+  color: #2d3748;
+  margin-bottom: 2rem;
   text-align: center;
 }
 
-.form-description h3 {
-  color: #2d3748;
-  margin-bottom: 0.5rem;
-}
-
-.form-description p {
-  color: #4a5568;
-}
-
-.location-entry {
-  background-color: #f7fafc;
+/* Amenity Weights Section */
+.amenity-weights-section {
+  background-color: #f8fafc;
   border-radius: 8px;
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
 }
 
-.location-header {
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.location-header h4 {
+.section-header h3 {
   color: #2d3748;
   margin: 0;
 }
 
-.remove-btn {
-  background-color: #fc8181;
-  color: white;
+.info-button {
+  background: none;
   border: none;
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
+  color: #4299e1;
+  font-size: 1.2rem;
   cursor: pointer;
-  font-size: 0.875rem;
+  padding: 0.25rem;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color 0.2s;
 }
 
-.remove-btn:hover {
-  background-color: #f56565;
+.info-button:hover {
+  background-color: #ebf8ff;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+.weight-tips {
+  background-color: #ebf8ff;
+  border: 1px solid #bee3f8;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.form-group {
-  margin-bottom: 1rem;
+.weight-tips h4 {
+  color: #2b6cb0;
+  margin: 0 0 0.75rem 0;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
+.weight-tips ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.weight-tips li {
   color: #4a5568;
-  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  font-size: 1rem;
-  color: #2d3748;
-  background-color: white;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #4299e1;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
-}
-
-.form-actions {
+.weight-sliders {
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.weight-slider-group {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.weight-slider-group label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #2d3748;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.weight-value {
+  color: #4299e1;
+  font-weight: 600;
+}
+
+.weight-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  background: #e2e8f0;
+  border-radius: 3px;
+  outline: none;
+  margin: 1rem 0;
+}
+
+.weight-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #4299e1;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.weight-slider::-webkit-slider-thumb:hover {
+  background: #3182ce;
+}
+
+.weight-description {
+  color: #718096;
+  font-size: 0.9rem;
+  text-align: right;
+  margin-top: 0.5rem;
+}
+
+.total-weight {
+  text-align: center;
+  font-weight: 600;
+  color: #2d3748;
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #ebf8ff;
+  border-radius: 6px;
+  border: 1px solid #bee3f8;
+}
+
+/* Travel Locations Section */
+.travel-locations-section {
   margin-top: 2rem;
 }
 
-.add-location-btn,
-.submit-btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s;
+.travel-locations-section h3 {
+  color: #2d3748;
+  margin-bottom: 1.5rem;
 }
 
-.add-location-btn {
+.location-input-group {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1.5fr 2fr 1fr;
+  gap: 1rem;
+  align-items: center;
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.location-type,
+.postcode-input,
+.transport-mode {
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.frequency-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.frequency-group label {
+  color: #4a5568;
+  font-size: 0.9rem;
+}
+
+.frequency-input {
+  width: 60px;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.remove-location {
+  background-color: #f56565;
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.remove-location:hover {
+  background-color: #e53e3e;
+}
+
+.add-location {
   background-color: #48bb78;
   color: white;
-  flex: 1;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 1rem;
+  transition: background-color 0.2s;
 }
 
-.add-location-btn:hover {
+.add-location:hover {
   background-color: #38a169;
 }
 
-.submit-btn {
+.submit-button {
   background-color: #4299e1;
   color: white;
-  flex: 1;
+  border: none;
+  padding: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 2rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
 }
 
-.submit-btn:hover {
+.submit-button:hover {
   background-color: #3182ce;
 }
 
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  .form-row {
+/* Responsive Design */
+@media (max-width: 768px) {
+  .location-input-group {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
-  
-  .form-actions {
-    flex-direction: column;
-  }
-  
-  .add-location-btn,
-  .submit-btn {
-    width: 100%;
+
+  .frequency-group {
+    justify-content: space-between;
   }
 } 

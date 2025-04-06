@@ -53,16 +53,32 @@ function Home() {
           const userData = docSnap.data();
           console.log('Loaded user data:', userData);
           setSavedPostcodes(userData.savedPostcodes || []);
-          // Load saved travel preferences
+          // Load saved travel preferences with default weights if not present
           if (userData.travelPreferences) {
             console.log('Loading travel preferences:', userData.travelPreferences);
-            setTravelPreferences(userData.travelPreferences);
+            setTravelPreferences({
+              locations: Array.isArray(userData.travelPreferences) 
+                ? userData.travelPreferences // Handle old format
+                : (userData.travelPreferences.locations || []),
+              amenityWeights: userData.travelPreferences.amenityWeights || {
+                school: 15,
+                hospital: 15,
+                supermarket: 10
+              }
+            });
           }
         } else {
           console.log('Creating new user document');
           await setDoc(userDoc, { 
             savedPostcodes: [],
-            travelPreferences: null,
+            travelPreferences: {
+              locations: [],
+              amenityWeights: {
+                school: 15,
+                hospital: 15,
+                supermarket: 10
+              }
+            },
             createdAt: new Date().toISOString(),
             email: currentUser.email
           });
@@ -184,7 +200,7 @@ function Home() {
     try {
       // Geocode all postcodes using the same implementation as handlePostcodeSubmit
       const geocodedPreferences = await Promise.all(
-        preferences.map(async (pref) => {
+        preferences.locations.map(async (pref) => {
           if (!pref.postcode) return null;
           
           const response = await fetch(`https://api.postcodes.io/postcodes/${pref.postcode}`);
@@ -209,8 +225,14 @@ function Home() {
       // Filter out null results
       const validGeocoded = geocodedPreferences.filter(pref => pref !== null);
 
+      // Create the complete preferences object with both locations and weights
+      const completePreferences = {
+        locations: validGeocoded,
+        amenityWeights: preferences.amenityWeights
+      };
+
       // Save preferences to state
-      setTravelPreferences(validGeocoded);
+      setTravelPreferences(completePreferences);
 
       // Save preferences to Firebase if user is logged in
       if (currentUser) {
@@ -218,7 +240,7 @@ function Home() {
           console.log("Saving travel preferences to Firebase for user:", currentUser.uid);
           const userDoc = doc(db, 'users', currentUser.uid);
           await updateDoc(userDoc, {
-            travelPreferences: validGeocoded
+            travelPreferences: completePreferences
           });
           console.log("Travel preferences saved successfully");
           
@@ -400,7 +422,7 @@ function Home() {
               locations={searchResults}
               savedPostcodes={[
                 ...savedPostcodes,
-                ...(travelPreferences?.map(pref => ({
+                ...(travelPreferences?.locations.map(pref => ({
                   id: `travel-${pref.type}-${pref.postcode}`,
                   label: `${pref.type} (${pref.frequency}x/week)`,
                   postcode: pref.postcode,
