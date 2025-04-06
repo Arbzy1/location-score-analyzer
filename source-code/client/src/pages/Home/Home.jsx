@@ -436,6 +436,39 @@ function Home() {
               {showScoreExplanation && (
                 <div className="score-explanation-box">
                   <h3>How We Calculate Scores</h3>
+                  
+                  {/* Score Interpretation Guide */}
+                  <div className="score-interpretation">
+                    <h4>Understanding Your Score</h4>
+                    <div className="score-ranges">
+                      <div className="score-range excellent">
+                        <span className="range">90-100</span>
+                        <span className="label">Excellent</span>
+                        <p>Perfect location with minimal travel time, excellent amenities, and great public transport</p>
+                      </div>
+                      <div className="score-range good">
+                        <span className="range">75-89</span>
+                        <span className="label">Very Good</span>
+                        <p>Strong choice with good balance of travel times and amenities</p>
+                      </div>
+                      <div className="score-range average">
+                        <span className="range">60-74</span>
+                        <span className="label">Good</span>
+                        <p>Decent location with reasonable travel times and access to basic amenities</p>
+                      </div>
+                      <div className="score-range below-average">
+                        <span className="range">40-59</span>
+                        <span className="label">Fair</span>
+                        <p>Some compromises in either travel time or amenity access</p>
+                      </div>
+                      <div className="score-range poor">
+                        <span className="range">0-39</span>
+                        <span className="label">Needs Improvement</span>
+                        <p>Significant travel time or limited access to essential amenities</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="score-breakdown">
                     <div className="score-component">
                       <h4>Amenities (30%)</h4>
@@ -457,12 +490,20 @@ function Home() {
                       <ul>
                         <li>Calculated using real driving times from OSRM</li>
                         <li>Weighted by visit frequency (more frequent trips have higher impact)</li>
-                        <li>Formula: Score = max(0, (120 - total_penalty) / 120)</li>
-                        <li>Where penalty = sum(frequency_weight × travel_time) for each destination</li>
+                        <li>Target: Keep daily travel time under 120 minutes</li>
+                        <li>Score decreases as daily travel time approaches or exceeds target</li>
                       </ul>
                     </div>
                   </div>
-                  <p className="score-note">* If no travel preferences are set, the score is scaled up proportionally.</p>
+                  <div className="score-tips">
+                    <h4>Tips for Interpreting Scores</h4>
+                    <ul>
+                      <li>A score above 75 indicates an excellent location that meets most of your needs</li>
+                      <li>Daily travel time over 120 minutes significantly impacts the travel score</li>
+                      <li>Amenities within 1km (2km for hospitals) receive the highest scores</li>
+                      <li>More bus routes and closer stops improve the transit score</li>
+                    </ul>
+                  </div>
                 </div>
               )}
               
