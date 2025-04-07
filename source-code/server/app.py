@@ -144,7 +144,7 @@ def get_area_names(bbox):
 
 def analyze_location(city, travel_preferences=None):
     print(f"🔍 Starting analysis for {city}...")
-    print(f"📋 Travel preferences: {travel_preferences}")
+    print(f"�� Travel preferences received: {travel_preferences}")
     
     try:
         # Get city boundary
@@ -283,11 +283,13 @@ def analyze_location(city, travel_preferences=None):
             # Calculate travel score (40% weight) if travel preferences exist
             travel_score = 0
             if travel_preferences and 'locations' in travel_preferences:
+                print("Processing travel preferences for location:", travel_preferences['locations'])
                 total_penalty = 0
                 total_frequency = sum(loc["frequency"] for loc in travel_preferences['locations'])
                 
                 for pref in travel_preferences['locations']:
                     try:
+                        print(f"Processing travel preference: {pref}")
                         coords = get_coordinates_from_postcode(pref["postcode"])
                         if coords:
                             travel_time = calculate_travel_time(
@@ -297,21 +299,24 @@ def analyze_location(city, travel_preferences=None):
                             )
                             
                             if travel_time is not None:
-                                location_data["travel_scores"][pref["type"]] = {
+                                print(f"Travel time calculated for {pref['postcode']}: {travel_time} mins")
+                                location_data["travel_scores"][pref["postcode"]] = {
                                     "travel_time": travel_time,
                                     "frequency": pref["frequency"],
-                                    "transport_mode": "driving"
+                                    "transport_mode": "driving",
+                                    "type": pref["type"]  # Include the type in the travel score data
                                 }
                                 
                                 weight = pref["frequency"] / total_frequency
                                 trip_penalty = weight * travel_time
                                 total_penalty += trip_penalty
                     except Exception as e:
-                        print(f"Error calculating travel score: {str(e)}")
+                        print(f"Error calculating travel score for {pref['postcode']}: {str(e)}")
                         continue
                 
                 max_acceptable_time = 120
                 travel_score = max(0, (max_acceptable_time - total_penalty) / max_acceptable_time) * 40
+                print(f"Final travel score: {travel_score}")
 
             # Calculate final score based on active components
             active_weight = sum(weight for weight in amenity_weights.values() if weight > 0)
