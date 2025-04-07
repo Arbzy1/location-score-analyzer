@@ -14,11 +14,35 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
   // Load saved preferences if they exist
   useEffect(() => {
     if (savedPreferences) {
+      console.log("🔍 DEBUG: Loading saved preferences in TravelBehaviourForm:", JSON.stringify(savedPreferences, null, 2));
+      
       // Handle both old format (array) and new format (object with locations and weights)
       if (Array.isArray(savedPreferences)) {
-        setLocations(savedPreferences);
+        // Ensure each location has a valid type
+        const processedLocations = savedPreferences.map(loc => {
+          console.log("🔍 DEBUG: Processing location:", JSON.stringify(loc, null, 2));
+          // Ensure type is properly set with a default if missing
+          const type = loc.type || 'Home';
+          return {
+            ...loc,
+            type: type  // Use the validated type
+          };
+        });
+        console.log("🔍 DEBUG: Processed locations:", JSON.stringify(processedLocations, null, 2));
+        setLocations(processedLocations);
       } else {
-        setLocations(savedPreferences.locations || []);
+        // Ensure each location has a valid type
+        const processedLocations = (savedPreferences.locations || []).map(loc => {
+          console.log("🔍 DEBUG: Processing location:", JSON.stringify(loc, null, 2));
+          // Ensure type is properly set with a default if missing
+          const type = loc.type || 'Home';
+          return {
+            ...loc,
+            type: type  // Use the validated type
+          };
+        });
+        console.log("🔍 DEBUG: Processed locations:", JSON.stringify(processedLocations, null, 2));
+        setLocations(processedLocations);
         if (savedPreferences.amenityWeights) {
           setAmenityWeights(savedPreferences.amenityWeights);
         }

@@ -56,10 +56,29 @@ function Home() {
           // Load saved travel preferences with default weights if not present
           if (userData.travelPreferences) {
             console.log('Loading travel preferences:', userData.travelPreferences);
+            const locations = Array.isArray(userData.travelPreferences)
+              ? userData.travelPreferences
+              : (userData.travelPreferences.locations || []);
+            
+            // Ensure types are preserved exactly as they are in Firebase
+            const processedLocations = locations.map(loc => {
+              // Ensure type is properly set with a default if missing
+              const type = loc.type || 'Home';
+              return {
+                ...loc,
+                type: type,  // Use the validated type
+                frequency: loc.frequency || 1  // Ensure frequency is never undefined
+              };
+            });
+            
+            console.log('Processed locations with types:', processedLocations.map(loc => ({ 
+              postcode: loc.postcode, 
+              type: loc.type, 
+              frequency: loc.frequency 
+            })));
+            
             setTravelPreferences({
-              locations: Array.isArray(userData.travelPreferences) 
-                ? userData.travelPreferences // Handle old format
-                : (userData.travelPreferences.locations || []),
+              locations: processedLocations,
               amenityWeights: userData.travelPreferences.amenityWeights || {
                 school: 15,
                 hospital: 15,
@@ -200,7 +219,12 @@ function Home() {
   };
 
   const handleTravelPreferences = async (preferences) => {
-    console.log("Received travel preferences from form:", preferences);
+    console.log("🔍 DEBUG: Received preferences from form:", JSON.stringify(preferences, null, 2));
+    console.log("🔍 DEBUG: Types in received preferences:", preferences.locations.map(loc => ({ 
+      postcode: loc.postcode, 
+      type: loc.type, 
+      frequency: loc.frequency 
+    })));
     
     try {
       // Geocode all postcodes using the same implementation as handlePostcodeSubmit
@@ -208,7 +232,7 @@ function Home() {
         preferences.locations.map(async (pref) => {
           if (!pref.postcode) return null;
           
-          console.log("Processing preference:", pref);
+          console.log("🔍 DEBUG: Processing preference:", JSON.stringify(pref, null, 2));
           
           const response = await fetch(`https://api.postcodes.io/postcodes/${pref.postcode}`);
           const data = await response.json();
@@ -220,19 +244,29 @@ function Home() {
 
           const { latitude, longitude } = data.result;
           
+          // Ensure we preserve the exact type from the form
+          const type = pref.type || 'Home';  // Default to 'Home' if type is missing
+          
           return {
             ...pref,
+            type: type,  // Use the validated type
             lat: latitude,
             lng: longitude,
             timestamp: new Date().toISOString(),
-            id: `${pref.type}-${pref.postcode}`  // Add a unique ID
+            id: `${type}-${pref.postcode}`,  // Use the validated type in the ID
+            frequency: pref.frequency || 1  // Ensure frequency is never undefined
           };
         })
       );
 
       // Filter out null results
       const validGeocoded = geocodedPreferences.filter(pref => pref !== null);
-      console.log("Geocoded preferences:", validGeocoded);
+      console.log("🔍 DEBUG: Valid geocoded preferences:", JSON.stringify(validGeocoded, null, 2));
+      console.log("🔍 DEBUG: Types in geocoded preferences:", validGeocoded.map(loc => ({ 
+        postcode: loc.postcode, 
+        type: loc.type, 
+        frequency: loc.frequency 
+      })));
 
       // Create the complete preferences object with both locations and weights
       const completePreferences = {
@@ -240,7 +274,7 @@ function Home() {
         amenityWeights: preferences.amenityWeights
       };
 
-      console.log("Setting travel preferences:", completePreferences);
+      console.log("🔍 DEBUG: Complete preferences:", JSON.stringify(completePreferences, null, 2));
       // Save preferences to state
       setTravelPreferences(completePreferences);
 
@@ -248,6 +282,12 @@ function Home() {
       if (currentUser) {
         try {
           console.log("Saving travel preferences to Firebase for user:", currentUser.uid);
+          console.log("🔍 DEBUG: Types being saved to Firebase:", validGeocoded.map(loc => ({ 
+            postcode: loc.postcode, 
+            type: loc.type, 
+            frequency: loc.frequency 
+          })));
+          
           const userDoc = doc(db, 'users', currentUser.uid);
           await updateDoc(userDoc, {
             travelPreferences: completePreferences
@@ -558,52 +598,47 @@ function Home() {
                       </button>
                     </div>
                     <p>Area: {location.area_name}</p>
-                    
-                    {/* Travel Time Summary Box */}
+
+                    {/* Travel Analysis Section */}
                     {Object.keys(location.travel_scores || {}).length > 0 && (
                       <div className="travel-summary-box">
-                        <h4>Travel Time Summary</h4>
+                        <h4>Travel & Transit Analysis</h4>
                         <div className="travel-metrics">
                           <div className="metric">
-                            <span className="metric-label">Total Weekly Travel:</span>
+                            <span className="metric-label">Daily Travel:</span>
                             <span className="metric-value">
                               {Math.round(Object.values(location.travel_scores)
-                                .reduce((total, data) => total + (data.travel_time * data.frequency), 0))} mins
+                                .reduce((total, data) => total + ((data.travel_time || 0) * (data.frequency || 1)), 0) / 5)} mins
                             </span>
                           </div>
                           <div className="metric">
-                            <span className="metric-label">Average Daily Travel:</span>
+                            <span className="metric-label">Transit Score:</span>
                             <span className="metric-value">
-                              {Math.round(Object.values(location.travel_scores)
-                                .reduce((total, data) => total + (data.travel_time * data.frequency), 0) / 5)} mins
-                            </span>
-                          </div>
-                          <div className="metric">
-                            <span className="metric-label">Travel Score Impact:</span>
-                            <span className="metric-value">
-                              {(() => {
-                                const dailyTime = Object.values(location.travel_scores)
-                                  .reduce((total, data) => total + (data.travel_time * data.frequency), 0) / 5;
-                                const scoreImpact = Math.round(Math.max(0, (120 - dailyTime) / 120 * 40));
-                                return `${scoreImpact}/40 points`;
-                              })()}
+                              {location.transit?.score || 0}/100 ({location.transit?.accessible_routes?.length || 0} routes)
                             </span>
                           </div>
                         </div>
+
                         <div className="travel-destinations">
-                          <h5>Individual Journeys:</h5>
+                          <h5>Journey Details:</h5>
                           <ul>
-                            {Object.entries(location.travel_scores).map(([id, data]) => {
+                            {travelPreferences?.locations.map(pref => {
+                              const key = `${pref.type}-${pref.postcode}`;
+                              const data = location.travel_scores[key];
+                              if (!data) return null;
+                              
                               return (
-                                <li key={id} className="journey-detail">
+                                <li key={key} className="journey-detail">
                                   <div className="journey-header">
-                                    <strong>{`${data.type} (${id})`}</strong>
-                                    <span className="journey-frequency">{data.frequency}x per week</span>
+                                    <div className="journey-title">
+                                      <strong>{pref.type}</strong>
+                                      <span className="journey-postcode"> - {pref.postcode}</span>
+                                    </div>
+                                    <span className="journey-frequency">{pref.frequency}x per week</span>
                                   </div>
                                   <div className="journey-stats">
-                                    <span>Single trip: {Math.round(data.travel_time)} mins</span>
-                                    <span>Weekly total: {Math.round(data.travel_time * data.frequency)} mins</span>
-                                    <span>Daily impact: {Math.round(data.travel_time * data.frequency / 5)} mins</span>
+                                    <span>Single trip: {Math.round(data.travel_time || 0)} mins</span>
+                                    <span>Weekly total: {Math.round((data.travel_time || 0) * (pref.frequency || 1))} mins</span>
                                   </div>
                                 </li>
                               );
@@ -615,177 +650,55 @@ function Home() {
 
                     {/* Score Breakdown Section */}
                     <div className="score-breakdown-card">
-                      <h4>Score Breakdown:</h4>
-                      
-                      {/* Travel Behavior Score - Now First */}
-                      {Object.keys(location.travel_scores || {}).length > 0 && (
-                        <div className="breakdown-component">
-                          <h5>Travel Behavior Score (40% weight):</h5>
-                          <div className="travel-score-details">
-                            {(() => {
-                              const totalWeeklyTime = Object.values(location.travel_scores)
-                                .reduce((total, data) => total + (data.travel_time * data.frequency), 0);
-                              const dailyTime = totalWeeklyTime / 5;
-                              const travelScore = Math.max(0, (120 - dailyTime) / 120 * 40);
-                              
+                      <h4>Score Breakdown</h4>
+                      <div className="score-components">
+                        <div className="score-component-item">
+                          <span>Travel (40%):</span>
+                          <span>{(() => {
+                            const dailyTime = Object.values(location.travel_scores || {})
+                              .reduce((total, data) => total + ((data.travel_time || 0) * (data.frequency || 1)), 0) / 5;
+                            return Math.round(Math.max(0, (120 - dailyTime) / 120 * 40));
+                          })()}</span>
+                        </div>
+                        <div className="score-component-item">
+                          <span>Amenities (30%):</span>
+                          <span>{(() => {
+                            const amenities = location.amenities || {};
+                            return Math.round(Object.values(amenities)
+                              .reduce((total, amenity) => total + (amenity?.score || 0), 0));
+                          })()}</span>
+                        </div>
+                        <div className="score-component-item">
+                          <span>Transit (20%):</span>
+                          <span>{Math.round(location.score_breakdown?.transit?.score || ((location.transit?.score || 0) * 0.2))}</span>
+                        </div>
+                        <div className="total-score">
+                          <span>Final Score:</span>
+                          <span>{location.score || 0}</span>
+                        </div>
+                      </div>
+
+                      {/* Amenities Section */}
+                      {Object.keys(location.amenities || {}).length > 0 && (
+                        <div className="amenities-section">
+                          <h5>Nearby Amenities:</h5>
+                          <ul className="amenities-list">
+                            {Object.entries(location.amenities || {}).map(([type, amenity]) => {
+                              if (!amenity || !amenity.weight) return null;
                               return (
-                                <>
-                                  <div className="travel-score-summary">
-                                    <p className="daily-travel">Daily Travel Time: {Math.round(dailyTime)} mins</p>
-                                    <p className="travel-score">Score: {Math.round(travelScore)}/40 points</p>
-                                    <p className="travel-explanation">
-                                      {dailyTime > 120 
-                                        ? "⚠️ Daily travel time exceeds 120 minutes target" 
-                                        : `✓ Within ${Math.round(120 - dailyTime)} minutes of daily target`}
-                                    </p>
+                                <li key={type}>
+                                  <span className="amenity-type">{type}:</span>
+                                  <div className="amenity-details">
+                                    <span>{amenity.name || type} ({amenity.distance}m)</span>
+                                    <span className="amenity-score">Score: {amenity.score.toFixed(1)}/{amenity.weight}</span>
                                   </div>
-                                  <div className="travel-details-list">
-                                    <h6>Journey Details:</h6>
-                                    <ul>
-                                      {Object.entries(location.travel_scores).map(([id, data]) => {
-                                        return (
-                                          <li key={id} className="journey-detail">
-                                            <div className="journey-header">
-                                              <strong>{`${data.type} (${id})`}</strong>
-                                              <span className="journey-frequency">{data.frequency}x per week</span>
-                                            </div>
-                                            <div className="journey-stats">
-                                              <span>Single trip: {Math.round(data.travel_time)} mins</span>
-                                              <span>Weekly total: {Math.round(data.travel_time * data.frequency)} mins</span>
-                                              <span>Daily impact: {Math.round(data.travel_time * data.frequency / 5)} mins</span>
-                                            </div>
-                                          </li>
-                                        );
-                                      })}
-                                    </ul>
-                                  </div>
-                                </>
+                                </li>
                               );
-                            })()}
-                          </div>
+                            })}
+                          </ul>
                         </div>
                       )}
-
-                      {/* Amenities Score */}
-                      <div className="breakdown-component">
-                        <h5>Amenities Score (30% weight):</h5>
-                        <ul>
-                          {Object.entries(location.amenities || {}).map(([type, amenity]) => {
-                            if (!amenity || !amenity.weight) return null;
-                            return (
-                              <li key={type}>
-                                <div className="amenity-score-detail">
-                                  <span className="breakdown-label">{type}:</span>
-                                  <div className="amenity-stats">
-                                    <span>{amenity.distance}m away</span>
-                                    <span className="score-contribution">Score: {amenity.score.toFixed(1)}/{amenity.weight}</span>
-                                  </div>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-
-                      {/* Transit Score */}
-                      <div className="breakdown-component">
-                        <h5>Public Transport Score (20% weight):</h5>
-                        <div className="transit-score-detail">
-                          <div className="transit-stats">
-                            <p>Transit Score: {location.transit?.score || 0}/100</p>
-                            <p>Available Routes: {location.transit?.accessible_routes?.length || 0}</p>
-                          </div>
-                          <p className="score-contribution">
-                            Score: {(location.score_breakdown?.transit?.score || 0).toFixed(1)}/20
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Final Score Summary */}
-                      <div className="final-score-summary">
-                        <h5>Total Score Breakdown:</h5>
-                        <div className="score-components">
-                          <div className="score-component-item">
-                            <span>Travel (40%):</span>
-                            <span>{(() => {
-                              const dailyTime = Object.values(location.travel_scores)
-                                .reduce((total, data) => total + (data.travel_time * data.frequency), 0) / 5;
-                              return Math.round(Math.max(0, (120 - dailyTime) / 120 * 40));
-                            })()}</span>
-                          </div>
-                          <div className="score-component-item">
-                            <span>Amenities (30%):</span>
-                            <span>{(() => {
-                              const amenities = location.amenities || {};
-                              return Math.round(Object.values(amenities)
-                                .reduce((total, amenity) => total + (amenity?.score || 0), 0));
-                            })()}</span>
-                          </div>
-                          <div className="score-component-item">
-                            <span>Transit (20%):</span>
-                            <span>{Math.round((location.transit?.score || 0) * 0.2)}</span>
-                          </div>
-                          <div className="total-score">
-                            <span>Final Score:</span>
-                            <span>{location.score}</span>
-                          </div>
-                        </div>
-                      </div>
                     </div>
-
-                    {/* Amenities Section */}
-                    {Object.keys(location.amenities || {}).length > 0 && (
-                      <>
-                        <h4>Nearby Amenities:</h4>
-                        <ul className="amenities-list">
-                          {Object.entries(location.amenities || {}).map(([type, amenity]) => {
-                            if (!amenity || !amenity.weight) return null;
-                            return (
-                              <li key={type}>
-                                <span className="amenity-type">{type}:</span>
-                                {amenity.name} ({amenity.distance}m)
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </>
-                    )}
-
-                    {/* Travel Times Section */}
-                    {Object.keys(location.travel_scores || {}).length > 0 && (
-                      <>
-                        <h4>Travel Analysis:</h4>
-                        <ul className="travel-list">
-                          {Object.entries(location.travel_scores).map(([id, data]) => {
-                            return (
-                              <li key={id}>
-                                <span className="travel-type">{`${data.type} (${id})`}:</span>
-                                <div className="travel-details">
-                                  <span className="travel-time">{Math.round(data.travel_time)} mins</span>
-                                  <span className="travel-frequency">({data.frequency}x/week)</span>
-                                  <span className="travel-mode">by {data.transport_mode}</span>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        <div className="travel-summary">
-                          <p>Total daily travel time: {
-                            Math.round(Object.values(location.travel_scores)
-                              .reduce((total, data) => total + (data.travel_time * data.frequency), 0) / 5
-                          )} mins (avg)</p>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Transit Information */}
-                    {location.transit && (
-                      <div className="transit-info">
-                        <h4>Public Transport:</h4>
-                        <p>Transit Score: {location.transit.score}/100</p>
-                        <p>Bus Routes: {location.transit.accessible_routes.length}</p>
-                      </div>
-                    )}
                     
                     <a 
                       href={location.google_maps_link} 

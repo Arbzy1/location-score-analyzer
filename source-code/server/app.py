@@ -144,7 +144,7 @@ def get_area_names(bbox):
 
 def analyze_location(city, travel_preferences=None):
     print(f"🔍 Starting analysis for {city}...")
-    print(f"�� Travel preferences received: {travel_preferences}")
+    print(f"🔄 Travel preferences received: {travel_preferences}")
     
     try:
         # Get city boundary
@@ -289,7 +289,7 @@ def analyze_location(city, travel_preferences=None):
                 
                 for pref in travel_preferences['locations']:
                     try:
-                        print(f"Processing travel preference: {pref}")
+                        print(f"🔍 DEBUG: Processing travel preference: {pref}")
                         coords = get_coordinates_from_postcode(pref["postcode"])
                         if coords:
                             travel_time = calculate_travel_time(
@@ -299,13 +299,23 @@ def analyze_location(city, travel_preferences=None):
                             )
                             
                             if travel_time is not None:
-                                print(f"Travel time calculated for {pref['postcode']}: {travel_time} mins")
-                                location_data["travel_scores"][pref["postcode"]] = {
+                                print(f"🔍 DEBUG: Travel time calculated for {pref['postcode']}: {travel_time} mins")
+                                print(f"🔍 DEBUG: Type from preference: {pref['type']}")
+                                
+                                # Ensure type is properly set with a default if missing
+                                pref_type = pref.get('type', 'Home')
+                                print(f"🔍 DEBUG: Type from preference: {pref_type}")
+                                
+                                # Create a unique key that includes both type and postcode
+                                key = f"{pref_type}-{pref['postcode']}"
+                                location_data["travel_scores"][key] = {
                                     "travel_time": travel_time,
                                     "frequency": pref["frequency"],
                                     "transport_mode": "driving",
-                                    "type": pref["type"]  # Include the type in the travel score data
+                                    "type": pref_type,  # Use the validated type
+                                    "postcode": pref["postcode"]  # Store postcode for reference
                                 }
+                                print(f"🔍 DEBUG: Stored travel score: {location_data['travel_scores'][key]}")
                                 
                                 weight = pref["frequency"] / total_frequency
                                 trip_penalty = weight * travel_time

@@ -397,7 +397,8 @@
 .travel-type {
   font-weight: 600;
   color: #2d3748;
-  text-transform: capitalize;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .travel-details {
@@ -420,7 +421,7 @@
 .travel-mode {
   color: #718096;
   font-size: 0.875rem;
-  text-transform: capitalize;
+  text-transform: none;
 }
 
 .travel-summary {
@@ -793,16 +794,24 @@
   margin-bottom: 0.75rem;
 }
 
-.journey-header strong {
+.journey-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.journey-title strong {
   color: #0f172a;
   font-size: 1rem;
-  text-transform: capitalize;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .journey-frequency {
   color: #64748b;
   font-size: 0.9rem;
   font-weight: 500;
+  margin-left: 1rem;
 }
 
 .journey-stats {
@@ -1041,4 +1050,23 @@
   font-weight: bold;
   position: absolute;
   left: 0;
+}
+
+.journey-postcode {
+  margin-left: 8px;
+  color: #666;
+  font-weight: normal;
+}
+
+.travel-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.travel-type strong {
+  color: #0f172a;
+  font-size: 1rem;
+  text-transform: none;
+  white-space: nowrap;
 } 
