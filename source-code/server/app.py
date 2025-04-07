@@ -144,6 +144,7 @@ def get_area_names(bbox):
 
 def analyze_location(city, travel_preferences=None):
     print(f"🔍 Starting analysis for {city}...")
+    print(f"📋 Travel preferences: {travel_preferences}")
     
     try:
         # Get city boundary
@@ -184,7 +185,12 @@ def analyze_location(city, travel_preferences=None):
         
         if travel_preferences and 'amenityWeights' in travel_preferences:
             print("Using custom amenity weights:", travel_preferences['amenityWeights'])
-            amenity_weights = travel_preferences['amenityWeights']
+            # Convert string percentages to integers if needed
+            amenity_weights = {
+                k: int(str(v).replace('%', '')) if isinstance(v, str) else int(v)
+                for k, v in travel_preferences['amenityWeights'].items()
+            }
+            print("Processed amenity weights:", amenity_weights)
             
         # Calculate the total weight of amenities
         total_amenity_weight = sum(amenity_weights.values())
@@ -201,84 +207,102 @@ def analyze_location(city, travel_preferences=None):
                 "category": "Recommended Location",
                 "amenities": {},
                 "score": 0,
-                "travel_scores": {}  # For storing travel times and scores
+                "travel_scores": {},  # For storing travel times and scores
+                "transit": {
+                    "score": 0,
+                    "accessible_routes": []
+                }
             }
             
-            # Initialize scores for each category
-            amenity_scores = {
-                "school": 0,
-                "hospital": 0,
-                "supermarket": 0,
-                "transit": 0,
-                "travel": 0  # New category for travel behavior
-            }
+            # Calculate amenity scores with proper weighting
+            amenity_score = 0
+            amenity_breakdown = {}
             
-            # Calculate amenity scores with custom weights
+            # Process amenities
             amenities_data = {
                 "school": (schools, 1000),      # 1km threshold
                 "hospital": (hospitals, 2000),   # 2km threshold
                 "supermarket": (supermarkets, 1000)  # 1km threshold
             }
-            
+
+            # Only process amenities with non-zero weights
             for a_type, (gdf, threshold) in amenities_data.items():
-                if not gdf.empty:
+                weight = amenity_weights.get(a_type, 0)
+                if weight > 0 and not gdf.empty:  # Only process if weight > 0
                     distance, nearest = get_nearest_amenity(pt, gdf)
                     if distance is not None:
                         # Calculate normalized score (0-1) for this amenity
-                        amenity_scores[a_type] = max(0, (threshold - distance) / threshold)
+                        distance_km = distance / 1000
+                        if a_type == "school":
+                            score = max(0, 1 - (distance_km / 2))  # 2km reference
+                        elif a_type == "hospital":
+                            score = max(0, 1 - (distance_km / 3))  # 3km reference
+                        else:  # supermarket
+                            score = max(0, 1 - (distance_km / 1))  # 1km reference
+                            
+                        # Calculate weighted score
+                        weighted_score = score * weight
+                        amenity_score += weighted_score
                         
+                        # Store the amenity data and its score
                         if nearest is not None and nearest.geometry is not None:
                             centroid = nearest.geometry.centroid
                             location_data["amenities"][a_type] = {
                                 "name": nearest.get("name", "Unnamed"),
                                 "distance": int(distance),
                                 "lat": centroid.y,
-                                "lon": centroid.x
+                                "lon": centroid.x,
+                                "weight": weight,
+                                "score": weighted_score
                             }
                         else:
                             location_data["amenities"][a_type] = {
                                 "name": nearest.get("name", "Unnamed"),
-                                "distance": int(distance)
+                                "distance": int(distance),
+                                "weight": weight,
+                                "score": weighted_score
                             }
+                        
+                        # Store score breakdown
+                        amenity_breakdown[a_type] = {
+                            "weight": weight,
+                            "score": weighted_score,
+                            "max_score": weight  # Store the maximum possible score
+                        }
+
+            # Calculate transit score (20% weight)
+            transit_score = gtfs_service.calculate_transit_score(pt.y, pt.x)
+            transit_weighted_score = (transit_score / 100) * 20
             
-            # Calculate transit score (20% of total)
-            transit_score = gtfs_service.calculate_transit_score(pt.y, pt.x) / 100
-            amenity_scores["transit"] = transit_score
-            
-            # Get accessible routes
-            accessible_routes = gtfs_service.get_route_accessibility(pt.y, pt.x)
+            # Initialize transit data
             location_data["transit"] = {
-                "score": transit_score * 100,
-                "accessible_routes": accessible_routes
+                "score": transit_score,
+                "accessible_routes": gtfs_service.get_route_accessibility(pt.y, pt.x)
             }
-            
-            # Calculate travel behavior score (40% of total)
+
+            # Calculate travel score (40% weight) if travel preferences exist
+            travel_score = 0
             if travel_preferences and 'locations' in travel_preferences:
                 total_penalty = 0
                 total_frequency = sum(loc["frequency"] for loc in travel_preferences['locations'])
                 
                 for pref in travel_preferences['locations']:
                     try:
-                        # Get coordinates from postcode
                         coords = get_coordinates_from_postcode(pref["postcode"])
                         if coords:
-                            # Calculate travel time using OSRM for driving
                             travel_time = calculate_travel_time(
                                 (pt.y, pt.x),
                                 (coords["lat"], coords["lon"]),
-                                mode='car'  # Always use driving mode for now
+                                mode='car'
                             )
                             
                             if travel_time is not None:
-                                # Store travel details
                                 location_data["travel_scores"][pref["type"]] = {
                                     "travel_time": travel_time,
                                     "frequency": pref["frequency"],
                                     "transport_mode": "driving"
                                 }
                                 
-                                # Calculate penalty for this trip
-                                # Weight is frequency/total_frequency to normalize
                                 weight = pref["frequency"] / total_frequency
                                 trip_penalty = weight * travel_time
                                 total_penalty += trip_penalty
@@ -286,48 +310,41 @@ def analyze_location(city, travel_preferences=None):
                         print(f"Error calculating travel score: {str(e)}")
                         continue
                 
-                # Convert penalty to score (0-1)
-                # Assuming max acceptable total daily travel time is 120 minutes
                 max_acceptable_time = 120
-                travel_score = max(0, (max_acceptable_time - total_penalty) / max_acceptable_time)
-                amenity_scores["travel"] = travel_score
-            
-            # Calculate amenity scores with proper weighting
-            # Only include amenities with non-zero weights
-            amenity_score = 0
-            amenity_breakdown = {}
-            
-            for a_type in ["school", "hospital", "supermarket"]:
-                weight = amenity_weights[a_type]
-                if weight > 0:  # Only include amenities with non-zero weights
-                    score = amenity_scores[a_type] * weight
-                    amenity_score += score
-                    amenity_breakdown[a_type] = score
+                travel_score = max(0, (max_acceptable_time - total_penalty) / max_acceptable_time) * 40
+
+            # Calculate final score based on active components
+            active_weight = sum(weight for weight in amenity_weights.values() if weight > 0)
+            if active_weight == 0:
+                # If no amenity weights, distribute score between transit and travel
+                if travel_preferences and 'locations' in travel_preferences:
+                    final_score = travel_score + transit_weighted_score
+                    scaling_factor = 100 / 60  # 60 = 40 (travel) + 20 (transit)
                 else:
-                    amenity_breakdown[a_type] = 0
+                    final_score = transit_weighted_score
+                    scaling_factor = 100 / 20  # Only transit score
+            else:
+                # Normal case with amenity weights
+                final_score = amenity_score + transit_weighted_score + travel_score
+                total_weight = active_weight + 20  # Add transit weight
+                if travel_preferences and 'locations' in travel_preferences:
+                    total_weight += 40  # Add travel weight
+                scaling_factor = 100 / total_weight
+
+            final_score *= scaling_factor
             
-            # Calculate final score with proper weighting
-            final_score = (
-                amenity_score +  # Already weighted by custom weights
-                amenity_scores["transit"] * 20 +  # 20% weight
-                (amenity_scores["travel"] * 40 if travel_preferences and 'locations' in travel_preferences else 0)  # 40% weight if travel prefs exist
-            )
-            
-            # If no travel preferences, scale up other scores proportionally
-            if not travel_preferences or 'locations' not in travel_preferences:
-                scaling_factor = 100 / (total_amenity_weight + 20)  # Add 20 for transit weight
-                final_score = final_score * scaling_factor
-            
-            # Store detailed score breakdown
+            # Store score breakdown
             location_data["score_breakdown"] = {
                 "amenities": {
                     "total": amenity_score,
-                    "school": amenity_breakdown["school"],
-                    "hospital": amenity_breakdown["hospital"],
-                    "supermarket": amenity_breakdown["supermarket"]
+                    "breakdown": amenity_breakdown,
+                    "weights": amenity_weights
                 },
-                "transit": amenity_scores["transit"] * 20,
-                "travel": amenity_scores["travel"] * 40 if travel_preferences and 'locations' in travel_preferences else 0
+                "transit": {
+                    "score": transit_weighted_score,
+                    "raw_score": transit_score
+                },
+                "travel": travel_score
             }
             
             location_data["score"] = round(final_score, 1)
@@ -349,7 +366,11 @@ def analyze_location(city, travel_preferences=None):
             print(f"Score: {loc['score']}")
             print(f"Area: {loc['area_name']}")
             print(f"Coordinates: {loc['lat']}, {loc['lon']}")
-            print("Amenities:", list(loc['amenities'].keys()))
+            
+            # Only show amenities with non-zero weights
+            active_amenities = [a for a in loc['amenities'].keys() if amenity_weights[a] > 0]
+            print("Amenities:", active_amenities)
+            
             print(f"Transit Score: {loc['transit']['score']}")
             print(f"Accessible Routes: {len(loc['transit']['accessible_routes'])}")
             if 'travel_scores' in loc:
@@ -410,10 +431,16 @@ def get_amenities():
         
     print("\n🚀 Server: Starting new request processing...")
     city = request.args.get('city', "Cardiff, UK")
+    travel_preferences_str = request.args.get('travel_preferences')
+    
     print(f"📍 Processing request for city: {city}")
+    print(f"🔄 Travel preferences received: {travel_preferences_str}")
     
     try:
-        locations = analyze_location(city)
+        # Parse travel preferences if they exist
+        travel_preferences = json.loads(travel_preferences_str) if travel_preferences_str else None
+        
+        locations = analyze_location(city, travel_preferences)
         
         response_data = {
             "city": city,

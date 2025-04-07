@@ -175,7 +175,7 @@ function Home() {
       const response = await axios.get(`http://localhost:5000/amenities`, {
         params: {
           city: selectedCity,
-          ...(travelPreferences && { travel_preferences: travelPreferences })
+          travel_preferences: JSON.stringify(travelPreferences)  // Stringify the preferences object
         }
       });
 
@@ -645,17 +645,15 @@ function Home() {
                       <div className="breakdown-component">
                         <h5>Amenities Score (30% weight):</h5>
                         <ul>
-                          {Object.entries(location.amenities).map(([type, amenity]) => {
-                            const weight = type === 'school' ? 15 : type === 'hospital' ? 15 : 10;
-                            const maxDistance = type === 'hospital' ? 2000 : 1000;
-                            const score = (Math.max(0, maxDistance - amenity.distance) / maxDistance) * weight;
+                          {Object.entries(location.amenities || {}).map(([type, amenity]) => {
+                            if (!amenity || !amenity.weight) return null;
                             return (
                               <li key={type}>
                                 <div className="amenity-score-detail">
                                   <span className="breakdown-label">{type}:</span>
                                   <div className="amenity-stats">
                                     <span>{amenity.distance}m away</span>
-                                    <span className="score-contribution">Score: {score.toFixed(1)}/{weight}</span>
+                                    <span className="score-contribution">Score: {amenity.score.toFixed(1)}/{amenity.weight}</span>
                                   </div>
                                 </div>
                               </li>
@@ -669,11 +667,11 @@ function Home() {
                         <h5>Public Transport Score (20% weight):</h5>
                         <div className="transit-score-detail">
                           <div className="transit-stats">
-                            <p>Transit Score: {location.transit.score}/100</p>
-                            <p>Available Routes: {location.transit.accessible_routes.length}</p>
+                            <p>Transit Score: {location.transit?.score || 0}/100</p>
+                            <p>Available Routes: {location.transit?.accessible_routes?.length || 0}</p>
                           </div>
                           <p className="score-contribution">
-                            Score: {(location.transit.score * 0.2).toFixed(1)}/20
+                            Score: {(location.score_breakdown?.transit?.score || 0).toFixed(1)}/20
                           </p>
                         </div>
                       </div>
@@ -684,67 +682,46 @@ function Home() {
                         <div className="score-components">
                           <div className="score-component-item">
                             <span>Travel (40%):</span>
-                            <span>
-                              {Object.keys(location.travel_scores || {}).length > 0 ? (
-                                Math.round(
-                                  Math.max(
-                                    0,
-                                    (120 - Object.values(location.travel_scores)
-                                      .reduce(
-                                        (total, data) => 
-                                          total + (data.travel_time * data.frequency),
-                                        0
-                                      ) / 5
-                                    ) / 120 * 40
-                                  )
-                                )
-                              ) : (
-                                // When no travel preferences are set, show the remaining score
-                                (location.score - 
-                                  // Subtract known scores (amenities and transit)
-                                  (Object.entries(location.amenities).reduce((total, [type, amenity]) => {
-                                    const weight = type === 'school' ? 15 : type === 'hospital' ? 15 : 10;
-                                    const maxDistance = type === 'hospital' ? 2000 : 1000;
-                                    return total + (Math.max(0, maxDistance - amenity.distance) / maxDistance) * weight;
-                                  }, 0) + 
-                                  (location.transit.score * 0.2))
-                                ).toFixed(1)
-                              )}
-                            </span>
+                            <span>{(() => {
+                              const dailyTime = Object.values(location.travel_scores || {})
+                                .reduce((total, data) => total + (data.travel_time * data.frequency), 0) / 5;
+                              return Math.round(Math.max(0, (120 - dailyTime) / 120 * 40));
+                            })()}</span>
                           </div>
                           <div className="score-component-item">
                             <span>Amenities (30%):</span>
-                            <span>
-                              {Object.entries(location.amenities).reduce((total, [type, amenity]) => {
-                                const weight = type === 'school' ? 15 : type === 'hospital' ? 15 : 10;
-                                const maxDistance = type === 'hospital' ? 2000 : 1000;
-                                return total + (Math.max(0, maxDistance - amenity.distance) / maxDistance) * weight;
-                              }, 0).toFixed(1)}
-                            </span>
+                            <span>{(() => {
+                              const amenities = location.amenities || {};
+                              return Math.round(Object.values(amenities)
+                                .reduce((total, amenity) => total + (amenity?.score || 0), 0));
+                            })()}</span>
                           </div>
                           <div className="score-component-item">
                             <span>Transit (20%):</span>
-                            <span>{(location.transit.score * 0.2).toFixed(1)}</span>
+                            <span>{Math.round((location.transit?.score || 0) * 0.2)}</span>
                           </div>
                           <div className="total-score">
                             <span>Final Score:</span>
-                            <span>{location.score}/100</span>
+                            <span>{location.score}</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Amenities Section */}
-                    {Object.keys(location.amenities).length > 0 && (
+                    {Object.keys(location.amenities || {}).length > 0 && (
                       <>
                         <h4>Nearby Amenities:</h4>
                         <ul className="amenities-list">
-                          {Object.entries(location.amenities).map(([type, amenity]) => (
-                            <li key={type}>
-                              <span className="amenity-type">{type}:</span>
-                              {amenity.name} ({amenity.distance}m)
-                            </li>
-                          ))}
+                          {Object.entries(location.amenities || {}).map(([type, amenity]) => {
+                            if (!amenity || !amenity.weight) return null;
+                            return (
+                              <li key={type}>
+                                <span className="amenity-type">{type}:</span>
+                                {amenity.name} ({amenity.distance}m)
+                              </li>
+                            );
+                          })}
                         </ul>
                       </>
                     )}
