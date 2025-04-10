@@ -74,14 +74,46 @@ function MapViewPage() {
                     <h3>Location {index + 1}</h3>
                     <p className="score">Score: {location.score}/100</p>
                     <p>Area: {location.area_name || "Unknown"}</p>
+                    
+                    {/* Score Breakdown */}
+                    <div className="score-breakdown">
+                      <h4>Score Breakdown:</h4>
+                      <div className="score-components">
+                        <div className="score-component">
+                          <span>Travel (40%): {Math.round(location.score_breakdown?.travel || 0)}</span>
+                        </div>
+                        <div className="score-component">
+                          <span>Amenities (40%): {Math.round(location.score_breakdown?.amenities?.total || 0)}</span>
+                        </div>
+                        <div className="score-component">
+                          <span>Transit (20%): {Math.round(location.score_breakdown?.transit?.score || 0)}</span>
+                        </div>
+                      </div>
+                    </div>
+
                     <h4>Nearby Amenities:</h4>
                     <ul className="amenities-list">
                       {Object.entries(location.amenities || {}).map(([type, amenity]) => (
                         <li key={type}>
                           <span className="amenity-type">{type}:</span> {amenity.name} ({amenity.distance}m)
+                          <br />
+                          <span className="amenity-score">Score: {amenity.score.toFixed(1)}/{amenity.weight}</span>
                         </li>
                       ))}
                     </ul>
+
+                    {/* Transit Details */}
+                    {location.transit && (
+                      <div className="transit-detail">
+                        <h4>Public Transport</h4>
+                        <p>
+                          Transit Score: {location.transit.score}/100
+                          <br />
+                          Accessible Routes: {location.transit.accessible_routes.length}
+                        </p>
+                      </div>
+                    )}
+
                     <a 
                       href={location.google_maps_link} 
                       target="_blank" 

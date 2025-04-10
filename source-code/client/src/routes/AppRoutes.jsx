@@ -3,6 +3,7 @@ import Layout from "../components/Layout/Layout";
 import Home from "../pages/Home/Home";
 import AboutPage from "../pages/About/AboutPage";
 import NotFoundPage from "../pages/NotFound/NotFoundPage";
+import TermsOfService from "../pages/TermsOfService";
 
 function AppRoutes() {
   console.log("🛣️ AppRoutes: Setting up routes");
@@ -12,6 +13,7 @@ function AppRoutes() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="terms" element={<TermsOfService />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
