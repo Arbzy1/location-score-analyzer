@@ -1,233 +1,139 @@
-# PropertyFinder
+# Location Score Analyzer
 
-A smart location finder that helps users find the ideal place to live based on their travel patterns, amenity preferences, and public transport needs.
+![Location Score Analyzer](source-code/client/public/android-chrome-192x192.png)
 
-## Scoring System
+A sophisticated web application that analyzes and scores residential locations based on travel times, amenities, and public transport accessibility. Built with React, Python, and modern web technologies.
 
-The PropertyFinder uses a sophisticated 100-point scoring system divided into three main components:
+## 🌟 Features
 
-### 1. Travel Behaviour Score (40 Points)
+- **Comprehensive Location Analysis**
+  - Travel time calculations
+  - Amenity proximity scoring
+  - Public transport accessibility
+  - Customizable scoring weights
 
-The Travel Behaviour component evaluates how convenient a location is in terms of travel to the places a user regularly visits. This makes up 40% of the total score.
+- **Interactive Maps**
+  - Visual representation of locations
+  - Real-time route visualization
+  - Amenity markers and information
 
-#### User Input
-Users provide a list of frequent destinations, such as:
-- Home
-- Work
-- School
+- **Advanced Scoring System**
+  - 40% Travel Score
+  - 40% Amenities Score
+  - 20% Transit Score
 
-For each location, the user specifies:
-- A UK postcode
-- How many times they travel there per week
+- **User-Friendly Interface**
+  - Responsive design
+  - Intuitive navigation
+  - Real-time updates
 
-#### Location Mapping
-Each postcode is geocoded using the [postcodes.io](https://postcodes.io/) API to retrieve its latitude and longitude.
+## 🚀 Getting Started
 
-#### Travel Time Calculation
-For every candidate location in the city:
-- The system calculates driving times to each destination using [OSRM](http://project-osrm.org/) (Open Source Routing Machine)
-- These are real travel durations based on the road network—not straight-line distances
+### Prerequisites
 
-#### Frequency Weighting
-Each destination is weighted based on how often it is visited.
+- Node.js (v14 or higher)
+- Python (v3.8 or higher)
+- npm or yarn
 
-For example:
-- **Home**: 7 visits per week
-- **Work**: 5 visits per week
-- **Total weekly trips** = 12
+### Installation
 
-The system then calculates:
-- Home weight: 7 ÷ 12 = **0.58**
-- Work weight: 5 ÷ 12 = **0.42**
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/location-score-analyzer.git
+   cd location-score-analyzer
+   ```
 
-This ensures destinations you visit more often have a bigger influence on the final score.
+2. Install client dependencies:
+   ```bash
+   cd source-code/client
+   npm install
+   ```
 
-#### Penalty System
-For each destination:
-- The travel time is multiplied by its frequency weight
-- All weighted times (penalties) are summed
+3. Install server dependencies:
+   ```bash
+   cd ../server
+   pip install -r requirements.txt
+   ```
 
-This gives a **weekly penalty**, which is then averaged over 5 weekdays to get a **daily travel time**.
+4. Start the development servers:
+   ```bash
+   # Terminal 1 - Client
+   cd source-code/client
+   npm run dev
 
-#### Scoring Formula
-The system uses a target of 120 minutes of daily travel (combined).
+   # Terminal 2 - Server
+   cd source-code/server
+   python app.py
+   ```
 
-Scores decrease linearly as travel time increases:
-```python
-travel_score = max(0, (120 - daily_penalty) / 120) * 40
-```
+## 📊 Scoring System
 
-Examples:
-- If daily travel time = 0 mins → **40/40 points**
-- If daily travel time = 60 mins → **20/40 points**
-- If daily travel time = 120+ mins → **0/40 points**
+### Travel Score (40%)
+- Based on daily commute times
+- Considers both work and school journeys
+- Optimized for minimum travel time
 
-### 2. Amenities Score (40 Points)
+### Amenities Score (40%)
+- Weighted scoring for nearby amenities:
+  - Schools (15 points)
+  - Hospitals (4 points)
+  - Supermarkets (21 points)
 
-The Amenities Score assesses how well a location meets your everyday needs. It accounts for up to **40 points** of the overall score, and is based on the distance to key services like schools, hospitals, and supermarkets.
+### Transit Score (20%)
+- Based on public transport accessibility
+- Considers bus route frequency
+- Proximity to transit stops
 
-#### User Preference Weights
-Users can assign importance (weight) to each amenity type.
+## 🛠️ Technology Stack
 
-The combined total must equal **40 points**.
+### Frontend
+- React
+- Vite
+- React Router
+- CSS Modules
+- Leaflet Maps
 
-**Example**:
-- Schools → 15 points
-- Hospitals → 10 points
-- Supermarkets → 15 points
-    
-    **Total** = 40 points
+### Backend
+- Python
+- Flask
+- SQLAlchemy
+- Google Maps API
+- Public Transport API
 
-If no custom preferences are provided, the system uses default weights:
-```python
-{
-  "school": 15,
-  "hospital": 15,
-  "supermarket": 10
-}
-```
+## 📝 Documentation
 
-#### Amenity Data Collection
-The system uses OpenStreetMap (via OSMnx) to find all:
-- `amenity=school`
-- `amenity=hospital`
-- `shop=supermarket`
+- [API Documentation](docs/API.md)
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Development Guide](docs/DEVELOPMENT.md)
+- [Testing Guide](docs/TESTING.md)
 
-These are retrieved for the entire city being analyzed.
+## 🤝 Contributing
 
-#### Proximity-Based Scoring
-For each candidate location, the distance to the **nearest** amenity of each type is calculated.
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
-Then, the score for each type is determined using a **linear decay function**, which rewards locations that are closer to these amenities.
+## 📄 License
 
-#### Scoring Formulas by Type:
-```python
-# Normalized score (0–1 scale)
-school:     score = max(0, 1 - (distance_km / 2))  # Up to 2km
-hospital:   score = max(0, 1 - (distance_km / 3))  # Up to 3km
-supermarket:score = max(0, 1 - (distance_km / 1))  # Up to 1km
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-#### Example:
-- School 1 km away → 0.5 normalized score → 0.5 × 15 = **7.5 points**
-- Hospital 1.5 km away → 0.5 × 10 = **5 points**
-- Supermarket 0.3 km away → 0.7 × 15 = **10.5 points**
+## 👥 Authors
 
-Total = 7.5 + 5 + 10.5 = **23 points out of 40**
+- Your Name - Initial work - [YourGitHub](https://github.com/yourusername)
 
-#### Breakdown and Storage
-Each location stores the following for every amenity type:
-- Name and coordinates of the nearest amenity
-- Exact distance (in meters)
-- Score (based on the distance and weight)
-- Max possible score for that type
+## 🙏 Acknowledgments
 
-This is used for:
-- Showing breakdowns to the user
-- Visualizing amenities on the map
+- Google Maps Platform
+- Public Transport API providers
+- OpenStreetMap contributors
+- All contributors and supporters
 
-### 3. Transit Score (20 Points)
+## 📞 Contact
 
-The **Transit Score** evaluates how well-connected a location is by **public transport**, specifically **bus accessibility** based on real GTFS (bus timetable) data. It contributes **20 points** to the overall location score.
+For support or inquiries, please contact:
+- Email: support@locationscorer.com
+- Website: https://locationscorer.com
 
-#### Two-Part Scoring System
-The score is made up of:
-- **Route Accessibility (70%)** → based on how many bus routes serve nearby stops
-- **Stop Proximity (30%)** → based on how close the nearest stop is
+---
 
-These add up to a **transit score out of 100**, which is then scaled to **20 points**:
-```python
-transit_weighted_score = (transit_score / 100) * 20
-```
-
-#### How It Works
-
-##### 🚌 A. Route Accessibility (up to 70 points)
-- The system finds the **nearest bus stop within 500m**
-- It looks up all the **routes** that pass through that stop
-- Each route adds **10 points**, capped at **70 points (7 routes)**
-
-**Example**:
-- 5 bus routes → 5 × 10 = **50 points**
-
-##### 🚶 B. Stop Proximity (up to 30 points)
-- Finds the **closest bus stop** within a **1000m** radius
-- Calculates walking distance using Haversine formula
-- Full 30 points if the stop is **right next to you**
-- Score decreases linearly the farther away the stop is, until 500m:
-```python
-distance_score = max(30 * (1 - min_distance / 500), 0)
-```
-
-**Example**:
-- Stop 100m away → (1 - 100/500) = 0.8 → 0.8 × 30 = **24 points**
-- Stop 600m away → beyond the scoring range → **0 points**
-
-#### Final Transit Score Example
-Let's say:
-- 6 bus routes nearby → 60 points
-- Closest stop is 200m away → (1 - 200/500) = 0.6 × 30 = 18 points
-- Raw transit score = 60 + 18 = **78/100**
-- Scaled: (78 / 100) × 20 = **15.6 / 20 points**
-
-## Example Location Breakdown: Leckwith
-
-**Final Score: 83.4 / 100**
-
-### Travel & Transit Analysis
-- **Average Daily Travel Time:** 35 mins
-- **Transit Score:** 87.7 / 100
-- **Accessible Bus Routes:** 6
-
-### Journey Details:
-| Destination | Postcode | Frequency | One-way Time | Weekly Total |
-| --- | --- | --- | --- | --- |
-| School | CF63 4ZZ | 6x/week | 19 mins | 112 mins |
-| School | CF11 0JR | 5x/week | 5 mins | 27 mins |
-| Work | CF24 4DS | 3x/week | 11 mins | 34 mins |
-
-**Total Weekly Travel Time:** 173 mins
-**Average Daily Travel Time:** 173 / 5 = **34.6 mins**
-→ Well below the 120-minute daily target
-→ **Travel Score: 28 / 40**
-
-### 🏙️ Amenities Score (User-weighted total: 40 points)
-User has set preferences like this:
-- **Schools: 15 points**
-- **Hospitals: 4 points**
-- **Supermarkets: 21 points**
-
-#### 🏥 Hospital:
-- Nearest: *Saint David's Hospital*
-- Distance: **1.35 km**
-- Formula: `1 - (1.35 / 3)` = 0.55
-- Score: 0.55 × 4 = **2.2 / 4**
-
-#### 🏫 School:
-- Nearest: *Fitzalan High School*
-- Distance: **316m (0.316 km)**
-- Formula: `1 - (0.316 / 2)` ≈ 0.84
-- Score: 0.84 × 15 ≈ **12.6 / 15**
-
-#### 🛒 Supermarket:
-- Nearest: *Lidl*
-- Distance: **278m (0.278 km)**
-- Formula: `1 - (0.278 / 1)` ≈ 0.72
-- Score: 0.72 × 21 ≈ **15.2 / 21**
-
-**Total Amenity Score: 2.2 + 12.6 + 15.2 = 30 / 40**
-
-### 🚌 Public Transport Score
-- **Routes nearby:** 6 → 6 × 10 = **60 / 70 points**
-- **Nearest bus stop distance:** around 150m
-    → Distance score = `1 - (150 / 500)` = 0.7 × 30 = **21 / 30**
-    → Raw transit score: 60 + 21 = **81 / 100**
-    → Weighted: `(87.7 / 100) × 20 = 17.5` → **Rounded: 18 / 20**
-
-### 🎯 Final Score Summary
-| Component | Points Earned | Max Points |
-| --- | --- | --- |
-| Travel | 28 | 40 |
-| Amenities | 30 | 40 |
-| Transit | 18 | 20 |
-| **Total** | **83.4** | **100** |
+<div align="center">
+  <sub>Built with ❤️ by Your Name</sub>
+</div>
