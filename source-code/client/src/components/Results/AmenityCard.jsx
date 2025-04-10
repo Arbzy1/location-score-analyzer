@@ -11,6 +11,19 @@ export function AmenityCard({ item, index }) {
       <div className="card-content">
         <div className="score-section">
           <span className="score">Score: {item.score}/100</span>
+          
+          {/* Score Breakdown */}
+          <div className="score-breakdown">
+            <div className="score-component">
+              <span>Travel (40%): {Math.round(item.score_breakdown?.travel || 0)}</span>
+            </div>
+            <div className="score-component">
+              <span>Amenities (40%): {Math.round(item.score_breakdown?.amenities?.total || 0)}</span>
+            </div>
+            <div className="score-component">
+              <span>Transit (20%): {Math.round(item.score_breakdown?.transit?.score || 0)}</span>
+            </div>
+          </div>
         </div>
 
         {item.reason && <p className="reason">{item.reason}</p>}
@@ -42,6 +55,8 @@ export function AmenityCard({ item, index }) {
               <strong>{amenity.name}</strong>
               <br />
               Distance: {amenity.distance}m
+              <br />
+              Score: {amenity.score.toFixed(1)}/{amenity.weight}
             </p>
             <a 
               href={`https://www.google.com/maps?q=${amenity.lat},${amenity.lon}`}
@@ -53,6 +68,18 @@ export function AmenityCard({ item, index }) {
             </a>
           </div>
         ))}
+
+        {/* Transit Details */}
+        {item.transit && (
+          <div className="transit-detail">
+            <h5>Public Transport</h5>
+            <p>
+              Transit Score: {item.transit.score}/100
+              <br />
+              Accessible Routes: {item.transit.accessible_routes.length}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
