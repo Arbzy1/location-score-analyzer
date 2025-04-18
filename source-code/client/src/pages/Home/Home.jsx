@@ -244,16 +244,14 @@ function Home() {
 
           const { latitude, longitude } = data.result;
           
-          // Ensure we preserve the exact type from the form
-          const type = pref.type || 'Home';  // Default to 'Home' if type is missing
-          
+          // Important! Use the exact type value without any modification
           return {
             ...pref,
-            type: type,  // Use the validated type
+            // No type validation or default here - use the exact type from the form
             lat: latitude,
             lng: longitude,
             timestamp: new Date().toISOString(),
-            id: `${type}-${pref.postcode}`,  // Use the validated type in the ID
+            id: `${pref.type}-${pref.postcode}`,  // Use the exact type in the ID
             frequency: pref.frequency || 1  // Ensure frequency is never undefined
           };
         })
@@ -339,7 +337,12 @@ function Home() {
           category: location.category || "Recommended Location",
           name: location.name || `Location ${index + 1}`,
           reason: location.reason || "",
-          transit: location.transit || { score: 0, accessible_routes: [] }
+          transit: location.transit || { score: 0, accessible_routes: [] },
+          score_breakdown: location.score_breakdown || {  // Add score_breakdown
+            travel: 0,
+            amenities: { total: 0 },
+            transit: { score: 0 }
+          }
         };
       }).filter(Boolean);
 
@@ -547,11 +550,11 @@ function Home() {
 
                   <div className="score-breakdown">
                     <div className="score-component">
-                      <h4>Amenities (30%)</h4>
+                      <h4>Amenities (40%)</h4>
                       <ul>
                         <li>Schools (15%): Based on distance to nearest school</li>
-                        <li>Hospitals (15%): Based on distance to nearest hospital</li>
-                        <li>Supermarkets (10%): Based on distance to nearest supermarket</li>
+                        <li>Hospitals (4%): Based on distance to nearest hospital</li>
+                        <li>Supermarkets (21%): Based on distance to nearest supermarket</li>
                       </ul>
                     </div>
                     <div className="score-component">
@@ -654,23 +657,15 @@ function Home() {
                       <div className="score-components">
                         <div className="score-component-item">
                           <span>Travel (40%):</span>
-                          <span>{(() => {
-                            const dailyTime = Object.values(location.travel_scores || {})
-                              .reduce((total, data) => total + ((data.travel_time || 0) * (data.frequency || 1)), 0) / 5;
-                            return Math.round(Math.max(0, (120 - dailyTime) / 120 * 40));
-                          })()}</span>
+                          <span>{location.score_breakdown?.travel || 0}</span>
                         </div>
                         <div className="score-component-item">
-                          <span>Amenities (30%):</span>
-                          <span>{(() => {
-                            const amenities = location.amenities || {};
-                            return Math.round(Object.values(amenities)
-                              .reduce((total, amenity) => total + (amenity?.score || 0), 0));
-                          })()}</span>
+                          <span>Amenities (40%):</span>
+                          <span>{Math.round(location.score_breakdown?.amenities?.total || 0)}</span>
                         </div>
                         <div className="score-component-item">
                           <span>Transit (20%):</span>
-                          <span>{Math.round(location.score_breakdown?.transit?.score || ((location.transit?.score || 0) * 0.2))}</span>
+                          <span>{Math.round(location.score_breakdown?.transit?.score || 0)}</span>
                         </div>
                         <div className="total-score">
                           <span>Final Score:</span>

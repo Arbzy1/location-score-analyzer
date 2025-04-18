@@ -334,20 +334,15 @@ def analyze_location(city, travel_preferences=None):
                 # If no amenity weights, distribute score between transit and travel
                 if travel_preferences and 'locations' in travel_preferences:
                     final_score = travel_score + transit_weighted_score
-                    scaling_factor = 100 / 60  # 60 = 40 (travel) + 20 (transit)
+                    # No scaling needed as these already sum to 60
                 else:
                     final_score = transit_weighted_score
-                    scaling_factor = 100 / 20  # Only transit score
+                    # No scaling needed as this is already out of 20
             else:
                 # Normal case with amenity weights
                 final_score = amenity_score + transit_weighted_score + travel_score
-                total_weight = active_weight + 20  # Add transit weight
-                if travel_preferences and 'locations' in travel_preferences:
-                    total_weight += 40  # Add travel weight
-                scaling_factor = 100 / total_weight
+                # No scaling needed as these already sum to 100 (40 + 20 + 40)
 
-            final_score *= scaling_factor
-            
             # Store score breakdown
             location_data["score_breakdown"] = {
                 "amenities": {

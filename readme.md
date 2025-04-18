@@ -1,4 +1,4 @@
-# Location Score Analyzer
++# Location Score Analyzer
 
 ![Location Score Analyzer](source-code/client/public/android-chrome-192x192.png)
 
