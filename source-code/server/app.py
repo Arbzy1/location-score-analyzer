@@ -394,24 +394,28 @@ def analyze_location(city, travel_preferences=None):
         return []
 
 def calculate_travel_time(origin, destination, mode='car'):
-    """Calculate travel time between two points using OSRM."""
+    """Calculate travel time between two points using ORS."""
     try:
         if mode == 'car':
-            profile = 'driving'
+            profile = 'driving-car'
         elif mode == 'cycle':
-            profile = 'cycling'
+            profile = 'cycling-regular'
         elif mode == 'walk':
-            profile = 'walking'
+            profile = 'foot-walking'
         else:
-            profile = 'driving'  # default to driving
+            profile = 'driving-car'  # default to driving
             
-        url = f"http://router.project-osrm.org/route/v1/{profile}/{origin[1]},{origin[0]};{destination[1]},{destination[0]}"
+        # Format coordinates as lon,lat (ORS expects longitude first)
+        start_point = f"{origin[1]},{origin[0]}"
+        end_point = f"{destination[1]},{destination[0]}"
+        
+        url = f"http://192.168.1.162:8080/ors/v2/directions/{profile}?start={start_point}&end={end_point}"
         response = requests.get(url)
         data = response.json()
         
-        if data["code"] == "Ok" and len(data["routes"]) > 0:
+        if data.get("features") and len(data["features"]) > 0:
             # Convert duration from seconds to minutes
-            return data["routes"][0]["duration"] / 60
+            return data["features"][0]["properties"]["segments"][0]["duration"] / 60
         return None
     except Exception as e:
         print(f"Error calculating travel time: {str(e)}")
