@@ -31,6 +31,7 @@ function Home() {
   const [postcode, setPostcode] = useState("");
   const [locationType, setLocationType] = useState("Home");
   const [showScoreExplanation, setShowScoreExplanation] = useState(false);
+  const [travelMode, setTravelMode] = useState("auto");
 
   console.log('savedPostcodes in Home:', savedPostcodes);
 
@@ -143,6 +144,7 @@ function Home() {
         type: locationType,
         lat: latitude,
         lng: longitude,
+        travelMode: travelMode,
         timestamp: new Date().toISOString()
       };
 
@@ -154,6 +156,7 @@ function Home() {
       setLocationLabel("");
       setPostcode("");
       setLocationType("Home");
+      setTravelMode("auto");
       console.log('Postcode saved successfully');
     } catch (error) {
       console.error('Error saving postcode:', error);
@@ -185,32 +188,50 @@ function Home() {
       return;
     }
 
+    console.log("🔍 Starting search with city:", selectedCity);
+    console.log("📝 Travel preferences:", travelPreferences);
+    
     setIsLoading(true);
     setError(null);
     setHasSearched(true);
 
     try {
-      // Debug log travel preferences before sending
-      console.log("Sending travel preferences to server:", travelPreferences);
+      const url = `/api/amenities`;
+      const params = {
+        city: selectedCity,
+        travel_preferences: JSON.stringify(travelPreferences),
+        _t: Date.now() // Add timestamp to prevent caching
+      };
       
-      // Make API call without requiring travel preferences
-      const response = await axios.get(`http://localhost:5000/amenities`, {
-        params: {
-          city: selectedCity,
-          travel_preferences: JSON.stringify(travelPreferences)  // Stringify the preferences object
+      console.log("🌐 Making request to:", url);
+      console.log("📦 Request params:", params);
+      
+      const response = await axios.get(url, {
+        params: params,
+        timeout: 30000,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         }
       });
 
+      console.log("✅ Received response:", response);
+      
       if (response.data && response.data.locations) {
-        // Debug log received data
-        console.log("Received data from server:", response.data);
+        console.log("📊 Processing results:", response.data.locations);
         processResults(response.data.locations);
       } else {
+        console.log("❌ No locations found in response");
         setError("No results found");
         setSearchResults([]);
       }
     } catch (err) {
-      console.error("Error during search:", err);
+      console.error("❌ Error during search:", err);
+      console.error("Error details:", {
+        message: err.message,
+        response: err.response,
+        request: err.request
+      });
       setError(err.response?.data?.message || "An error occurred during search");
       setSearchResults([]);
     } finally {
@@ -428,6 +449,16 @@ function Home() {
                 <option value="School">School</option>
                 <option value="Other">Other</option>
               </select>
+              <select
+                className="travel-mode-select"
+                value={travelMode}
+                onChange={(e) => setTravelMode(e.target.value)}
+              >
+                <option value="auto">Auto (Fastest)</option>
+                <option value="walking">Walking</option>
+                <option value="cycling">Cycling</option>
+                <option value="driving">Driving</option>
+              </select>
               <button 
                 className="add-location-btn"
                 onClick={handlePostcodeSubmit}
@@ -443,6 +474,9 @@ function Home() {
                   <div key={index} className="saved-postcode-item">
                     <span className="postcode-label">
                       {postcode.label} - {postcode.postcode}
+                      <span className="travel-mode-label">
+                        ({postcode.travelMode || 'auto'})
+                      </span>
                     </span>
                     <button
                       onClick={() => handleRemovePostcode(postcode.id)}

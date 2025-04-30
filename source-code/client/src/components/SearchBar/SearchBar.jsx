@@ -28,12 +28,7 @@ function SearchBar({ onSearchResults, onSearchStart }) {
     try {
       console.log("⏳ Starting API request...");
       const response = await axios.get(apiUrl, {
-        params: { city: query },
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        withCredentials: false
+        params: { city: query }
       });
       
       console.group("📥 Server Response Details");

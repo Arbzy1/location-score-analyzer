@@ -10,80 +10,67 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
     supermarket: 10
   });
   const [showTips, setShowTips] = useState(false);
+  const [travelMode, setTravelMode] = useState('auto');
+  const [showTravelModeTips, setShowTravelModeTips] = useState(false);
 
   // Load saved preferences if they exist
   useEffect(() => {
     if (savedPreferences) {
-      console.log("🔍 DEBUG: Loading saved preferences in TravelBehaviourForm:", JSON.stringify(savedPreferences, null, 2));
-      
-      // Handle both old format (array) and new format (object with locations and weights)
       if (Array.isArray(savedPreferences)) {
-        // Ensure each location has a valid type
-        const processedLocations = savedPreferences.map(loc => {
-          console.log("🔍 DEBUG: Processing location:", JSON.stringify(loc, null, 2));
-          // Ensure type is properly set with a default if missing
-          const type = loc.type || 'Home';
-          return {
-            ...loc,
-            type: type  // Use the validated type
-          };
-        });
-        console.log("🔍 DEBUG: Processed locations:", JSON.stringify(processedLocations, null, 2));
+        const processedLocations = savedPreferences.map(loc => ({
+          ...loc,
+          type: loc.type || 'Home'
+        }));
         setLocations(processedLocations);
       } else {
-        // Ensure each location has a valid type
-        const processedLocations = (savedPreferences.locations || []).map(loc => {
-          console.log("🔍 DEBUG: Processing location:", JSON.stringify(loc, null, 2));
-          // Ensure type is properly set with a default if missing
-          const type = loc.type || 'Home';
-          return {
-            ...loc,
-            type: type  // Use the validated type
-          };
-        });
-        console.log("🔍 DEBUG: Processed locations:", JSON.stringify(processedLocations, null, 2));
+        const processedLocations = (savedPreferences.locations || []).map(loc => ({
+          ...loc,
+          type: loc.type || 'Home'
+        }));
         setLocations(processedLocations);
         if (savedPreferences.amenityWeights) {
           setAmenityWeights(savedPreferences.amenityWeights);
+        }
+        if (savedPreferences.travelMode) {
+          setTravelMode(savedPreferences.travelMode);
         }
       }
     }
   }, [savedPreferences]);
 
-  // Calculate total weight
   const totalWeight = Object.values(amenityWeights).reduce((sum, weight) => sum + weight, 0);
 
-  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Filter out empty locations
     const validLocations = locations.filter(loc => loc.postcode && loc.type && loc.frequency);
     onSubmit({
       locations: validLocations,
-      amenityWeights
+      amenityWeights,
+      travelMode
     });
   };
 
-  // Add a new location
   const addLocation = () => {
-    setLocations([...locations, { postcode: '', type: 'Home', frequency: 1 }]);
+    setLocations([...locations, { 
+      postcode: '', 
+      type: 'Home', 
+      frequency: 1,
+      travelMode: 'auto'
+    }]);
   };
 
-  // Remove a location
   const removeLocation = (index) => {
     const newLocations = [...locations];
     newLocations.splice(index, 1);
     setLocations(newLocations);
   };
 
-  // Update a location
   const updateLocation = (index, field, value) => {
     const newLocations = [...locations];
     newLocations[index] = { ...newLocations[index], [field]: value };
     setLocations(newLocations);
   };
 
-  // Update amenity weight
   const updateWeight = (amenity, value) => {
     setAmenityWeights({
       ...amenityWeights,
@@ -95,6 +82,73 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
     <div className="travel-behaviour-form">
       <h2>Travel Preferences</h2>
       
+      {/* Travel Mode Section */}
+      <div className="travel-mode-section">
+        <h3>Travel Mode Preferences</h3>
+        <div className="travel-mode-options">
+          <label>
+            <input
+              type="radio"
+              name="travelMode"
+              value="auto"
+              checked={travelMode === 'auto'}
+              onChange={(e) => setTravelMode(e.target.value)}
+            />
+            Auto-select fastest mode
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="travelMode"
+              value="driving"
+              checked={travelMode === 'driving'}
+              onChange={(e) => setTravelMode(e.target.value)}
+            />
+            Always use driving
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="travelMode"
+              value="cycling"
+              checked={travelMode === 'cycling'}
+              onChange={(e) => setTravelMode(e.target.value)}
+            />
+            Always use cycling
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="travelMode"
+              value="walking"
+              checked={travelMode === 'walking'}
+              onChange={(e) => setTravelMode(e.target.value)}
+            />
+            Always use walking
+          </label>
+        </div>
+        
+        <button 
+          type="button" 
+          className="tips-toggle"
+          onClick={() => setShowTravelModeTips(!showTravelModeTips)}
+        >
+          {showTravelModeTips ? 'Hide Travel Mode Tips' : 'Show Travel Mode Tips'}
+        </button>
+        
+        {showTravelModeTips && (
+          <div className="travel-mode-tips">
+            <h4>About Travel Modes</h4>
+            <ul>
+              <li><strong>Auto-select:</strong> We'll calculate routes for all modes and choose the fastest one</li>
+              <li><strong>Driving:</strong> Only consider car routes (good if you always drive)</li>
+              <li><strong>Cycling:</strong> Only consider bike routes (good if you prefer cycling)</li>
+              <li><strong>Walking:</strong> Only consider walking routes (good for short distances)</li>
+            </ul>
+          </div>
+        )}
+      </div>
+
       {/* Amenity Weights Section */}
       <div className="amenity-weights-section">
         <h3>Set Amenity Importance</h3>
@@ -171,37 +225,52 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
         <p>Add locations you visit regularly</p>
         
         {locations.map((location, index) => (
-          <div key={index} className="location-input">
-            <input
-              type="text"
-              placeholder="Postcode"
-              value={location.postcode}
-              onChange={(e) => updateLocation(index, 'postcode', e.target.value)}
-            />
-            <select
-              value={location.type}
-              onChange={(e) => updateLocation(index, 'type', e.target.value)}
-            >
-              <option value="Home">Home</option>
-              <option value="Work">Work</option>
-              <option value="School">School</option>
-              <option value="Other">Other</option>
-            </select>
-            <input
-              type="number"
-              min="1"
-              max="7"
-              placeholder="Times per week"
-              value={location.frequency}
-              onChange={(e) => updateLocation(index, 'frequency', parseInt(e.target.value, 10))}
-            />
-            <button 
-              type="button" 
-              className="remove-location"
-              onClick={() => removeLocation(index)}
-            >
-              Remove
-            </button>
+          <div key={index} className="location-row">
+            <div className="location-details">
+              <input
+                type="text"
+                placeholder="Postcode"
+                value={location.postcode}
+                onChange={(e) => updateLocation(index, 'postcode', e.target.value)}
+                className="postcode-input"
+              />
+              <select
+                value={location.type}
+                onChange={(e) => updateLocation(index, 'type', e.target.value)}
+                className="location-type"
+              >
+                <option value="Home">Home</option>
+                <option value="Work">Work</option>
+                <option value="School">School</option>
+                <option value="Other">Other</option>
+              </select>
+              <input
+                type="number"
+                min="1"
+                max="7"
+                placeholder="Times per week"
+                value={location.frequency}
+                onChange={(e) => updateLocation(index, 'frequency', parseInt(e.target.value, 10))}
+                className="frequency-input"
+              />
+              <select
+                value={location.travelMode || 'auto'}
+                onChange={(e) => updateLocation(index, 'travelMode', e.target.value)}
+                className="mode-select"
+              >
+                <option value="auto">Auto (Fastest)</option>
+                <option value="walking">Walking</option>
+                <option value="cycling">Cycling</option>
+                <option value="driving">Driving</option>
+              </select>
+              <button 
+                type="button" 
+                className="remove-btn"
+                onClick={() => removeLocation(index)}
+              >
+                Remove
+              </button>
+            </div>
           </div>
         ))}
         

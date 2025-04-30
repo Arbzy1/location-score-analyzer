@@ -253,39 +253,36 @@
 }
 
 .add-location-form {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
   margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #1a1a1a;
+  border-radius: 8px;
 }
 
 .location-label-input,
-.postcode-input {
+.postcode-input,
+.location-type-select,
+.travel-mode-select {
   padding: 8px 12px;
-  background-color: #1a1a1a;
+  background-color: #333;
   color: white;
-  border: none;
+  border: 1px solid #444;
   border-radius: 4px;
   font-size: 0.9rem;
-  width: 200px;
+  width: 100%;
 }
 
-.location-label-input::placeholder,
-.postcode-input::placeholder {
-  color: #999;
-}
-
-.location-type-select {
-  padding: 8px 12px;
-  background-color: #1a1a1a;
+.travel-mode-select {
+  background-color: #333;
   color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  cursor: pointer;
+  border: 1px solid #444;
 }
 
-.location-type-select option {
-  background-color: #1a1a1a;
+.travel-mode-select option {
+  background-color: #333;
   color: white;
 }
 
@@ -1069,4 +1066,107 @@
   font-size: 1rem;
   text-transform: none;
   white-space: nowrap;
+}
+
+/* Travel Behaviour Form Section */
+.travel-behaviour-form {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.travel-behaviour-form h2 {
+  text-align: center;
+  color: #2d3748;
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
+}
+
+.travel-mode-section {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.travel-mode-section h3 {
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.travel-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.travel-mode-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.travel-mode-options label:hover {
+  background-color: #edf2f7;
+}
+
+.travel-mode-options input[type="radio"] {
+  margin: 0;
+}
+
+.travel-mode-tips {
+  background-color: #ebf8ff;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.travel-mode-tips h4 {
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.travel-mode-tips ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.travel-mode-tips li {
+  margin-bottom: 0.5rem;
+  color: #4a5568;
+}
+
+.travel-mode-tips li strong {
+  color: #2d3748;
+}
+
+.tips-toggle {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.tips-toggle:hover {
+  background-color: #3182ce;
+}
+
+.travel-mode-label {
+  color: #888;
+  font-size: 0.9em;
+  margin-left: 8px;
+  font-style: italic;
 } 

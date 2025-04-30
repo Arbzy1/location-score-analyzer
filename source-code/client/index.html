@@ -50,8 +50,8 @@
     <meta name="msapplication-TileColor" content="#da532c" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
     
-    <!-- Security Headers - Updated to allow Firebase and Google Analytics -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://apis.google.com https://www.gstatic.com https://*.firebaseio.com https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:5000 https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://api.mapbox.com https://events.mapbox.com http://192.168.1.162:8080; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' http://localhost:5000 https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://api.mapbox.com https://events.mapbox.com http://192.168.1.162:8080; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
@@ -61,9 +61,9 @@
     <meta http-equiv="Cross-Origin-Resource-Policy" content="same-origin" />
     
     <!-- Preload Critical Resources -->
-    <link rel="preload" href="/src/main.jsx" as="script" />
+    <link rel="preload" href="/src/main.jsx" as="script" crossorigin="anonymous" />
     <link rel="preload" href="/src/index.css" as="style" />
-    <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <link rel="preload" href="/images/hero.webp" as="image" />
     
     <!-- Preconnect to External Resources -->

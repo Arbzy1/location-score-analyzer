@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import osmnx as ox
 import geopandas as gpd
 import random
@@ -16,7 +15,6 @@ import json
 from gtfs_service import GTFSService
 
 app = Flask(__name__)
-CORS(app)
 
 print("Server: Starting up Flask application...")
 ox.settings.use_cache = False
@@ -24,6 +22,16 @@ ox.settings.log_console = True
 
 # Initialize GTFS service
 gtfs_service = GTFSService()
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('X-Frame-Options', 'SAMEORIGIN')
+    response.headers.add('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' http://localhost:5000 https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://api.mapbox.com https://events.mapbox.com http://192.168.1.162:8080; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';")
+    return response
 
 def get_nearest_amenity(pt, gdf):
     """Find the nearest amenity and its distance from a point."""
@@ -156,6 +164,12 @@ def analyze_location(city, travel_preferences=None):
         city_polygon = city_gdf.unary_union
         print("✅ City boundary retrieved successfully")
 
+        # Get travel mode preference
+        travel_mode = 'auto'  # default to auto
+        if travel_preferences and 'travelMode' in travel_preferences:
+            travel_mode = travel_preferences['travelMode']
+            print(f"Using travel mode: {travel_mode}")
+
         # Generate points
         print("🎲 Generating random points...")
         num_candidates = 20
@@ -185,7 +199,6 @@ def analyze_location(city, travel_preferences=None):
         
         if travel_preferences and 'amenityWeights' in travel_preferences:
             print("Using custom amenity weights:", travel_preferences['amenityWeights'])
-            # Convert string percentages to integers if needed
             amenity_weights = {
                 k: int(str(v).replace('%', '')) if isinstance(v, str) else int(v)
                 for k, v in travel_preferences['amenityWeights'].items()
@@ -295,11 +308,11 @@ def analyze_location(city, travel_preferences=None):
                             travel_time = calculate_travel_time(
                                 (pt.y, pt.x),
                                 (coords["lat"], coords["lon"]),
-                                mode='car'
+                                mode=travel_mode
                             )
                             
                             if travel_time is not None:
-                                print(f"🔍 DEBUG: Travel time calculated for {pref['postcode']}: {travel_time} mins")
+                                print(f"🔍 DEBUG: Travel time calculated for {pref['postcode']}: {travel_time['duration']} mins")
                                 print(f"🔍 DEBUG: Type from preference: {pref['type']}")
                                 
                                 # Ensure type is properly set with a default if missing
@@ -309,16 +322,17 @@ def analyze_location(city, travel_preferences=None):
                                 # Create a unique key that includes both type and postcode
                                 key = f"{pref_type}-{pref['postcode']}"
                                 location_data["travel_scores"][key] = {
-                                    "travel_time": travel_time,
+                                    "travel_time": travel_time['duration'],
                                     "frequency": pref["frequency"],
-                                    "transport_mode": "driving",
-                                    "type": pref_type,  # Use the validated type
-                                    "postcode": pref["postcode"]  # Store postcode for reference
+                                    "transport_mode": travel_time['mode'],
+                                    "all_times": travel_time['all_times'],
+                                    "type": pref_type,
+                                    "postcode": pref["postcode"]
                                 }
                                 print(f"🔍 DEBUG: Stored travel score: {location_data['travel_scores'][key]}")
                                 
                                 weight = pref["frequency"] / total_frequency
-                                trip_penalty = weight * travel_time
+                                trip_penalty = weight * travel_time['duration']
                                 total_penalty += trip_penalty
                     except Exception as e:
                         print(f"Error calculating travel score for {pref['postcode']}: {str(e)}")
@@ -334,14 +348,11 @@ def analyze_location(city, travel_preferences=None):
                 # If no amenity weights, distribute score between transit and travel
                 if travel_preferences and 'locations' in travel_preferences:
                     final_score = travel_score + transit_weighted_score
-                    # No scaling needed as these already sum to 60
                 else:
                     final_score = transit_weighted_score
-                    # No scaling needed as this is already out of 20
             else:
                 # Normal case with amenity weights
                 final_score = amenity_score + transit_weighted_score + travel_score
-                # No scaling needed as these already sum to 100 (40 + 20 + 40)
 
             # Store score breakdown
             location_data["score_breakdown"] = {
@@ -393,30 +404,64 @@ def analyze_location(city, travel_preferences=None):
         print(f"❌ Error in analyze_location: {str(e)}\n")
         return []
 
-def calculate_travel_time(origin, destination, mode='car'):
-    """Calculate travel time between two points using ORS."""
+def calculate_travel_time(origin, destination, mode='auto'):
+    """Calculate travel time between two points using ORS.
+    If mode is 'auto', calculates times for all modes and returns the fastest one."""
     try:
-        if mode == 'car':
-            profile = 'driving-car'
-        elif mode == 'cycle':
-            profile = 'cycling-regular'
-        elif mode == 'walk':
-            profile = 'foot-walking'
-        else:
-            profile = 'driving-car'  # default to driving
-            
         # Format coordinates as lon,lat (ORS expects longitude first)
         start_point = f"{origin[1]},{origin[0]}"
         end_point = f"{destination[1]},{destination[0]}"
         
-        url = f"http://192.168.1.162:8080/ors/v2/directions/{profile}?start={start_point}&end={end_point}"
-        response = requests.get(url)
-        data = response.json()
-        
-        if data.get("features") and len(data["features"]) > 0:
-            # Convert duration from seconds to minutes
-            return data["features"][0]["properties"]["segments"][0]["duration"] / 60
-        return None
+        if mode == 'auto':
+            # Calculate times for all modes
+            modes = ['driving-car', 'cycling-regular', 'foot-walking']
+            times = {}
+            
+            for transport_mode in modes:
+                url = f"http://192.168.1.162:8080/ors/v2/directions/{transport_mode}?start={start_point}&end={end_point}"
+                response = requests.get(url)
+                data = response.json()
+                
+                if data.get("features") and len(data["features"]) > 0:
+                    # Convert duration from seconds to minutes
+                    duration = data["features"][0]["properties"]["segments"][0]["duration"] / 60
+                    times[transport_mode] = duration
+            
+            if not times:
+                return None
+                
+            # Find the fastest mode
+            fastest_mode = min(times.items(), key=lambda x: x[1])
+            print(f"Fastest mode: {fastest_mode[0]} ({fastest_mode[1]} mins)")
+            return {
+                "duration": fastest_mode[1],
+                "mode": fastest_mode[0],
+                "all_times": times
+            }
+        else:
+            # Use specific mode
+            if mode == 'driving':
+                profile = 'driving-car'
+            elif mode == 'cycling':
+                profile = 'cycling-regular'
+            elif mode == 'walking':
+                profile = 'foot-walking'
+            else:
+                profile = 'driving-car'  # default to driving
+                
+            url = f"http://192.168.1.162:8080/ors/v2/directions/{profile}?start={start_point}&end={end_point}"
+            response = requests.get(url)
+            data = response.json()
+            
+            if data.get("features") and len(data["features"]) > 0:
+                duration = data["features"][0]["properties"]["segments"][0]["duration"] / 60
+                return {
+                    "duration": duration,
+                    "mode": profile,
+                    "all_times": {profile: duration}
+                }
+            return None
+            
     except Exception as e:
         print(f"Error calculating travel time: {str(e)}")
         return None
@@ -444,6 +489,9 @@ def get_amenities():
         return '', 204
         
     print("\n🚀 Server: Starting new request processing...")
+    print(f"📝 Request headers: {dict(request.headers)}")
+    print(f"📝 Request args: {request.args}")
+    
     city = request.args.get('city', "Cardiff, UK")
     travel_preferences_str = request.args.get('travel_preferences')
     
@@ -453,8 +501,11 @@ def get_amenities():
     try:
         # Parse travel preferences if they exist
         travel_preferences = json.loads(travel_preferences_str) if travel_preferences_str else None
+        print(f"📦 Parsed travel preferences: {travel_preferences}")
         
+        print("🔍 Starting location analysis...")
         locations = analyze_location(city, travel_preferences)
+        print(f"✅ Analysis complete. Found {len(locations)} locations")
         
         response_data = {
             "city": city,
@@ -463,8 +514,13 @@ def get_amenities():
         
         print("📤 Sending response to client")
         return jsonify(response_data)
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON Decode Error: {str(e)}")
+        return jsonify({"error": "Invalid travel preferences format"}), 400
     except Exception as e:
         print(f"❌ Server Error: {str(e)}")
+        import traceback
+        print(f"Stack trace: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/bus-routes', methods=['GET'])
