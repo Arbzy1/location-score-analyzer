@@ -14,6 +14,7 @@ import {
   arrayRemove 
 } from 'firebase/firestore';
 import { useAuth } from "../../contexts/AuthContext";
+import { TransportBreakdown } from '../../components/TransportBreakdown/TransportBreakdown';
 
 function Home() {
   console.log("🏠 Home: Component mounting");
@@ -84,8 +85,14 @@ function Home() {
                 school: 15,
                 hospital: 15,
                 supermarket: 10
-              }
+              },
+              travelMode: userData.travelPreferences.travelMode || 'auto'
             });
+
+            console.log('Loaded travel mode:', userData.travelPreferences.travelMode || 'auto');
+            
+            // Also update the travelMode state
+            setTravelMode(userData.travelPreferences.travelMode || 'auto');
           }
         } else {
           console.log('Creating new user document');
@@ -222,11 +229,22 @@ function Home() {
 
       console.log("✅ Received response:", response);
       
-      if (response.data && response.data.locations) {
-        console.log("📊 Processing results:", response.data.locations);
-        processResults(response.data.locations);
+      if (response.data) {
+        if (response.data.locations && Array.isArray(response.data.locations)) {
+          // Object format with locations array
+          console.log("📊 Processing results from locations property:", response.data.locations);
+          processResults(response.data.locations);
+        } else if (Array.isArray(response.data)) {
+          // Direct array format
+          console.log("📊 Processing results from direct array:", response.data);
+          processResults(response.data);
+        } else {
+          console.log("❌ No valid locations found in response");
+          setError("No results found");
+          setSearchResults([]);
+        }
       } else {
-        console.log("❌ No locations found in response");
+        console.log("❌ No data in response");
         setError("No results found");
         setSearchResults([]);
       }
@@ -312,7 +330,8 @@ function Home() {
       // Create the complete preferences object with both locations and weights
       const completePreferences = {
         locations: validGeocoded,
-        amenityWeights: preferences.amenityWeights
+        amenityWeights: preferences.amenityWeights,
+        travelMode: preferences.travelMode
       };
 
       console.log("🔍 DEBUG: Complete preferences:", JSON.stringify(completePreferences, null, 2));
@@ -357,48 +376,94 @@ function Home() {
   };
 
   const processResults = (results) => {
+    console.log("🔍 Processing results:", results);
     try {
-      console.log("Processing results:", results);
-      const processedResults = results.map((location, index) => {
-        if (!location) {
-          console.error("❌ Invalid location data at index", index);
-          return null;
+      // Check if results is already an array (direct array format)
+      if (Array.isArray(results)) {
+        const processedResults = results.map((location, index) => {
+          if (!location) return null;
+
+          return {
+            ...location,
+            id: location.id || `location-${index}`,
+            lat: location.lat,
+            lng: location.lon,
+            score: location.score || 0,
+            amenities: location.amenities || {},
+            area_name: location.area_name || "Unknown Area",
+            google_maps_link: location.google_maps_link || `https://www.google.com/maps?q=${location.lat},${location.lon}`,
+            travel_scores: location.travel_scores || {},
+            category: location.category || "Recommended Location",
+            name: location.name || `Location ${index + 1}`,
+            reason: location.reason || "",
+            transit: location.transit || { score: 0, accessible_routes: [] },
+            score_breakdown: location.score_breakdown || {
+              travel: 0,
+              amenities: { total: 0 },
+              transit: { score: 0 }
+            },
+            transport_modes: location.transport_modes || {}
+          };
+        }).filter(Boolean);
+
+        console.log("✅ Processed results:", processedResults);
+        
+        if (processedResults.length > 0) {
+          console.log("Setting search results:", processedResults);
+          setSearchResults(processedResults);
+          setError(null);
+        } else {
+          setSearchResults([]);
+          setError("No valid locations found in the response");
         }
-
-        console.log(`Processing location ${index}:`, location);
-
-        return {
-          id: index + 1,
-          score: location.score || 0,
-          area_name: location.area_name || "Unknown Location",
-          amenities: location.amenities || {},
-          travel_scores: location.travel_scores || {},  // New field
-          lat: location.lat || 0,
-          lon: location.lon || 0,
-          google_maps_link: location.google_maps_link || 
-            `https://www.google.com/maps?q=${location.lat},${location.lon}`,
-          category: location.category || "Recommended Location",
-          name: location.name || `Location ${index + 1}`,
-          reason: location.reason || "",
-          transit: location.transit || { score: 0, accessible_routes: [] },
-          score_breakdown: location.score_breakdown || {  // Add score_breakdown
-            travel: 0,
-            amenities: { total: 0 },
-            transit: { score: 0 }
-          }
-        };
-      }).filter(Boolean);
-
-      console.log("✅ Processed results:", processedResults);
-      
-      if (processedResults.length > 0) {
-        console.log("Setting search results:", processedResults);
-        setSearchResults(processedResults);
-        setError(null);
-      } else {
-        setSearchResults([]);
-        setError("No valid locations found in the response");
+        return;
       }
+
+      // Handle object format with locations property
+      if (results && results.locations && Array.isArray(results.locations)) {
+        const processedResults = results.locations.map((location, index) => {
+          if (!location) return null;
+
+          return {
+            ...location,
+            id: location.id || `location-${index}`,
+            lat: location.lat,
+            lng: location.lon,
+            score: location.score || 0,
+            amenities: location.amenities || {},
+            area_name: location.area_name || "Unknown Area",
+            google_maps_link: location.google_maps_link || `https://www.google.com/maps?q=${location.lat},${location.lon}`,
+            travel_scores: location.travel_scores || {},
+            category: location.category || "Recommended Location",
+            name: location.name || `Location ${index + 1}`,
+            reason: location.reason || "",
+            transit: location.transit || { score: 0, accessible_routes: [] },
+            score_breakdown: location.score_breakdown || {
+              travel: 0,
+              amenities: { total: 0 },
+              transit: { score: 0 }
+            },
+            transport_modes: location.transport_modes || {}
+          };
+        }).filter(Boolean);
+
+        console.log("✅ Processed results:", processedResults);
+        
+        if (processedResults.length > 0) {
+          console.log("Setting search results:", processedResults);
+          setSearchResults(processedResults);
+          setError(null);
+        } else {
+          setSearchResults([]);
+          setError("No valid locations found in the response");
+        }
+        return;
+      }
+
+      // If we got here, the format is invalid
+      console.error("Invalid results format:", results);
+      throw new Error("Invalid results format");
+      
     } catch (err) {
       console.error("❌ Error processing results:", err);
       setError("Error processing search results");
@@ -480,6 +545,7 @@ function Home() {
                 <option value="walking">Walking</option>
                 <option value="cycling">Cycling</option>
                 <option value="driving">Driving</option>
+                <option value="bus">Bus Transit</option>
               </select>
               <button 
                 className="add-location-btn"
@@ -625,8 +691,8 @@ function Home() {
                       <ul>
                         <li>Calculated using real driving times from OSRM</li>
                         <li>Weighted by visit frequency (more frequent trips have higher impact)</li>
-                        <li>Target: Keep daily travel time under 120 minutes</li>
-                        <li>Score decreases as daily travel time approaches or exceeds target</li>
+                        <li>Target: Keep weekly travel time under 600 minutes (10 hours)</li>
+                        <li>Score decreases as weekly travel time approaches or exceeds target</li>
                       </ul>
                     </div>
                   </div>
@@ -634,7 +700,7 @@ function Home() {
                     <h4>Tips for Interpreting Scores</h4>
                     <ul>
                       <li>A score above 75 indicates an excellent location that meets most of your needs</li>
-                      <li>Daily travel time over 120 minutes significantly impacts the travel score</li>
+                      <li>Weekly travel time over 600 minutes significantly impacts the travel score</li>
                       <li>Amenities within 1km (2km for hospitals) receive the highest scores</li>
                       <li>More bus routes and closer stops improve the transit score</li>
                     </ul>
@@ -664,10 +730,10 @@ function Home() {
                         <h4>Travel & Transit Analysis</h4>
                         <div className="travel-metrics">
                           <div className="metric">
-                            <span className="metric-label">Daily Travel:</span>
+                            <span className="metric-label">Weekly Travel:</span>
                             <span className="metric-value">
                               {Math.round(Object.values(location.travel_scores)
-                                .reduce((total, data) => total + ((data.travel_time || 0) * (data.frequency || 1)), 0) / 5)} mins
+                                .reduce((total, data) => total + ((data.travel_time || 0) * (data.frequency || 1)), 0))} mins/week
                             </span>
                           </div>
                           <div className="metric">
@@ -728,6 +794,12 @@ function Home() {
                           <span>{location.score || 0}</span>
                         </div>
                       </div>
+
+                      {/* Add Transport Mode Breakdown */}
+                      <TransportBreakdown 
+                        transport_modes={location.transport_modes || {}} 
+                        travel_details={location.score_breakdown?.travel_details}
+                      />
 
                       {/* Amenities Section */}
                       {Object.keys(location.amenities || {}).length > 0 && (

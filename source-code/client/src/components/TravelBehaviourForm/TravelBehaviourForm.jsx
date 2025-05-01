@@ -126,6 +126,16 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
             />
             Always use walking
           </label>
+          <label>
+            <input
+              type="radio"
+              name="travelMode"
+              value="bus"
+              checked={travelMode === 'bus'}
+              onChange={(e) => setTravelMode(e.target.value)}
+            />
+            Always use bus transit
+          </label>
         </div>
         
         <button 
@@ -144,6 +154,7 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
               <li><strong>Driving:</strong> Only consider car routes (good if you always drive)</li>
               <li><strong>Cycling:</strong> Only consider bike routes (good if you prefer cycling)</li>
               <li><strong>Walking:</strong> Only consider walking routes (good for short distances)</li>
+              <li><strong>Bus transit:</strong> Only consider public transport + walking routes (environmentally friendly)</li>
             </ul>
           </div>
         )}
@@ -262,6 +273,7 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
                 <option value="walking">Walking</option>
                 <option value="cycling">Cycling</option>
                 <option value="driving">Driving</option>
+                <option value="bus">Bus Transit</option>
               </select>
               <button 
                 type="button" 

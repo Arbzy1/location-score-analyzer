@@ -1169,4 +1169,48 @@
   font-size: 0.9em;
   margin-left: 8px;
   font-style: italic;
+}
+
+/* Transport Breakdown Styles */
+.transport-breakdown {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+/* Transport Mode Icon colors */
+.mode-time .mode-icon {
+  font-size: 20px;
+  margin-right: 10px;
+}
+
+/* Journey Detail Styling */
+.journey-detail {
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #3182ce;
+}
+
+.journey-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.journey-title {
+  font-weight: 600;
+}
+
+.journey-frequency {
+  font-size: 0.9em;
+  color: #4a5568;
+}
+
+.journey-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.9em;
+  color: #4a5568;
 } 
