@@ -713,7 +713,7 @@ function Home() {
                   <div key={index} className="location-card">
                     <h3>Location {index + 1}</h3>
                     <div className="score-container">
-                      <p className="score">Score: {location.score}/100</p>
+                      <p className="score">Score: {parseFloat(location.score).toFixed(1)}/100</p>
                       <button 
                         className="score-info-btn"
                         onClick={() => setShowScoreExplanation(true)}
@@ -779,19 +779,19 @@ function Home() {
                       <div className="score-components">
                         <div className="score-component-item">
                           <span>Travel (40%):</span>
-                          <span>{location.score_breakdown?.travel || 0}</span>
+                          <span>{(location.score_breakdown?.travel || 0).toFixed(1)}</span>
                         </div>
                         <div className="score-component-item">
                           <span>Amenities (40%):</span>
-                          <span>{Math.round(location.score_breakdown?.amenities?.total || 0)}</span>
+                          <span>{parseFloat(location.score_breakdown?.amenities?.total || 0).toFixed(1)}</span>
                         </div>
                         <div className="score-component-item">
                           <span>Transit (20%):</span>
-                          <span>{Math.round(location.score_breakdown?.transit?.score || 0)}</span>
+                          <span>{parseFloat(location.score_breakdown?.transit?.score || 0).toFixed(1)}</span>
                         </div>
                         <div className="total-score">
                           <span>Final Score:</span>
-                          <span>{location.score || 0}</span>
+                          <span>{parseFloat(location.score || 0).toFixed(1)}</span>
                         </div>
                       </div>
 

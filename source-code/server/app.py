@@ -365,9 +365,14 @@ def analyze_location(city, travel_preferences=None):
                             "max_score": weight  # Store the maximum possible score
                         }
 
-            # Calculate transit score (20% weight)
+            # Round amenity score to 1 decimal place
+            amenity_score = round(amenity_score, 1)
+            
+            # Transit score (20% weight)
             transit_score = gtfs_service.calculate_transit_score(pt.y, pt.x)
             transit_weighted_score = (transit_score / 100) * 20
+            # Round transit weighted score to 1 decimal place
+            transit_weighted_score = round(transit_weighted_score, 1)
             
             # Initialize transit data
             location_data["transit"] = {
@@ -463,6 +468,8 @@ def analyze_location(city, travel_preferences=None):
                 # Calculate travel score based on weekly travel time (total_penalty is already the weekly total)
                 max_acceptable_time = 600  # 10 hours per week (was 120 minutes per day)
                 travel_score = max(0, (max_acceptable_time - total_penalty) / max_acceptable_time) * 40
+                # Round to 1 decimal place
+                travel_score = round(travel_score, 1)
                 print(f"Final travel score: {travel_score} (weekly travel time: {total_penalty:.2f} mins)")
 
             # Calculate final score based on active components
