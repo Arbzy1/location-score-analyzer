@@ -16,6 +16,17 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { TransportBreakdown } from '../../components/TransportBreakdown/TransportBreakdown';
 
+// Helper function to display transport mode names
+const getTransportModeDisplay = (mode) => {
+  switch(mode) {
+    case 'driving-car': return 'Driving';
+    case 'cycling-regular': return 'Cycling';
+    case 'foot-walking': return 'Walking';
+    case 'bus-transit': return 'Bus Transit';
+    default: return mode;
+  }
+};
+
 function Home() {
   console.log("🏠 Home: Component mounting");
   const navigate = useNavigate();
@@ -800,6 +811,117 @@ function Home() {
                         transport_modes={location.transport_modes || {}} 
                         travel_details={location.score_breakdown?.travel_details}
                       />
+
+                      {/* System Transparency Section */}
+                      <div className="system-transparency">
+                        <div className="transparency-header" onClick={() => {
+                          const isExpanded = location.isTransparencyExpanded || false;
+                          const updatedResults = [...searchResults];
+                          updatedResults[index] = {
+                            ...location,
+                            isTransparencyExpanded: !isExpanded
+                          };
+                          setSearchResults(updatedResults);
+                        }}>
+                          <h4>System Transparency</h4>
+                          <span className="toggle-icon">{location.isTransparencyExpanded ? '▲' : '▼'}</span>
+                        </div>
+                        
+                        {location.isTransparencyExpanded && (
+                          <div className="transparency-details">
+                            <div className="transparency-intro">
+                              <p>We believe in complete transparency about how our recommendations are generated. 
+                              This section reveals all the data and calculations used to determine this location's score.</p>
+                            </div>
+                            
+                            <div className="raw-data-section">
+                              <h5>Raw Data Used</h5>
+                              
+                              <div className="data-category">
+                                <h6>Location Details</h6>
+                                <ul>
+                                  <li>Coordinates: {location.lat.toFixed(6)}, {location.lon.toFixed(6)}</li>
+                                  <li>Area: {location.area_name}</li>
+                                </ul>
+                              </div>
+                              
+                              <div className="data-category">
+                                <h6>Travel Calculation Data</h6>
+                                <ul>
+                                  {Object.entries(location.travel_scores || {}).map(([key, details]) => (
+                                    <li key={key}>
+                                      {key}: 
+                                      <ul>
+                                        <li>Distance: ~{Math.round(details.travel_time * 0.5)} km (estimated)</li>
+                                        <li>Travel time: {details.travel_time.toFixed(1)} mins via {getTransportModeDisplay(details.transport_mode)}</li>
+                                        <li>Weekly frequency: {details.frequency}x</li>
+                                        <li>Weekly time cost: {(details.travel_time * details.frequency).toFixed(1)} mins</li>
+                                        <li>All calculated times: {Object.entries(details.all_times || {}).map(([mode, time]) => 
+                                          `${getTransportModeDisplay(mode)}: ${time.toFixed(1)} mins`
+                                        ).join(', ')}</li>
+                                      </ul>
+                                    </li>
+                                  ))}
+                                </ul>
+                                <p>Total weekly travel time: {Object.values(location.travel_scores || {})
+                                  .reduce((sum, item) => sum + (item.travel_time * item.frequency), 0).toFixed(1)} mins</p>
+                                <p>Travel score formula: <code>max(0, (600 - total_weekly_time) / 600) * 40</code></p>
+                              </div>
+                              
+                              <div className="data-category">
+                                <h6>Transit Analysis</h6>
+                                <ul>
+                                  <li>Transit score: {location.transit?.score.toFixed(1)}/100</li>
+                                  <li>Bus routes within walking distance: {location.transit?.accessible_routes?.length || 0}</li>
+                                  <li>Transit score formula: <code>(transit_score / 100) * 20</code></li>
+                                </ul>
+                              </div>
+                              
+                              <div className="data-category">
+                                <h6>Amenities Analysis</h6>
+                                <ul>
+                                  {Object.entries(location.amenities || {}).map(([type, amenity]) => {
+                                    if (!amenity || !amenity.weight) return null;
+                                    return (
+                                      <li key={type}>
+                                        {type}: {amenity.name} ({amenity.distance}m)
+                                        <ul>
+                                          <li>Weight in calculation: {amenity.weight}%</li>
+                                          <li>Distance-adjusted score: {amenity.score.toFixed(1)}/{amenity.weight}</li>
+                                          <li>Distance threshold: {type === 'hospital' ? '3km' : '1km'}</li>
+                                        </ul>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            </div>
+                            
+                            <div className="calculation-section">
+                              <h5>Score Calculation Breakdown</h5>
+                              <div className="calculation-formula">
+                                <p>Final Score = Travel Score (40%) + Amenities Score (40%) + Transit Score (20%)</p>
+                                <p>= {location.score_breakdown?.travel.toFixed(1)} + {parseFloat(location.score_breakdown?.amenities?.total || 0).toFixed(1)} + {parseFloat(location.score_breakdown?.transit?.score || 0).toFixed(1)}</p>
+                                <p>= {parseFloat(location.score).toFixed(1)}/100</p>
+                              </div>
+                            </div>
+                            
+                            <div className="methodology-section">
+                              <h5>System Methodology</h5>
+                              <p>Our location recommendations are based on the following methodology:</p>
+                              <ol>
+                                <li>We generate multiple random locations within the requested city area</li>
+                                <li>For each location, we calculate travel times to your frequent destinations using OpenStreetMap Routing Service and OpenTripPlanner</li>
+                                <li>We find nearby amenities using OpenStreetMap data</li>
+                                <li>We analyze public transit accessibility using GTFS (transit schedule) data</li>
+                                <li>We calculate a comprehensive score based on all these factors</li>
+                                <li>We present the top scoring locations to help you find your ideal area</li>
+                              </ol>
+                              <p>All data is sourced from open data providers and real-time routing services to ensure accuracy.</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Amenities Section */}
                       {Object.keys(location.amenities || {}).length > 0 && (
