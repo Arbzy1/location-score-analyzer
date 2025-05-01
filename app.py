@@ -1,0 +1,60 @@
+from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = Flask(__name__)
+CORS(app)
+
+@app.route('/api/postcode/<postcode>')
+def get_postcode_info(postcode):
+    try:
+        # Clean the postcode - remove spaces and convert to uppercase
+        cleaned_postcode = postcode.strip().replace(' ', '').upper()
+        print(f"Processing postcode: {cleaned_postcode}")
+        
+        response = requests.get(f'https://api.postcodes.io/postcodes/{cleaned_postcode}')
+        print(f"Postcodes.io response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            error_msg = f'Postcode API error: {response.status_code}'
+            print(error_msg)
+            return jsonify({'error': error_msg}), response.status_code
+    except Exception as e:
+        error_msg = f'Error processing postcode: {str(e)}'
+        print(error_msg)
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/api/postcode/<postcode>/amenities')
+def get_postcode_amenities(postcode):
+    try:
+        # First get the coordinates from postcode
+        postcode_response = requests.get(f'https://api.postcodes.io/postcodes/{postcode}')
+        if postcode_response.status_code != 200:
+            return jsonify({'error': 'Invalid postcode'}), 400
+            
+        data = postcode_response.json()
+        lat = data['result']['latitude']
+        lon = data['result']['longitude']
+        
+        # Then get amenities using the coordinates
+        # This is a placeholder - replace with your actual amenities API call
+        amenities = {
+            'schools': [],
+            'hospitals': [],
+            'supermarkets': []
+        }
+        
+        return jsonify(amenities)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# No need for security headers as they're handled by Vite
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000) 

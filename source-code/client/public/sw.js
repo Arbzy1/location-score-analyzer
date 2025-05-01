@@ -1,7 +1,7 @@
 const CACHE_NAME = 'location-score-cache-v1';
 const urlsToCache = [
   '/',
-  '/index.html',
+  // '/index.html', // Commented out to prevent caching during development
   '/src/main.jsx',
   '/src/index.css',
   '/favicon.svg',
@@ -44,6 +44,13 @@ self.addEventListener('activate', event => {
 
 // Fetch event - serve from cache or network
 self.addEventListener('fetch', event => {
+  // Skip caching for index.html to ensure updated CSP is used
+  if (event.request.url.includes('/index.html') || event.request.url.endsWith('/')) {
+    console.log('Bypassing cache for index.html');
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then(response => {

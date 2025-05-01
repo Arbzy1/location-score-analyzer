@@ -125,12 +125,17 @@ function Home() {
 
     try {
       console.log('Geocoding postcode:', postcode);
-      // First, geocode the postcode
-      const response = await fetch(`https://api.postcodes.io/postcodes/${postcode}`);
-      const data = await response.json();
+      const response = await fetch(`http://localhost:5000/api/postcode/${encodeURIComponent(postcode)}`);
       
       if (!response.ok) {
-        throw new Error('Invalid postcode');
+        const errorText = await response.text();
+        throw new Error(`Server error: ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.status !== 200) {
+        throw new Error(data.error || 'Invalid postcode');
       }
 
       const { latitude, longitude } = data.result;
@@ -248,33 +253,46 @@ function Home() {
     })));
     
     try {
-      // Geocode all postcodes using the same implementation as handlePostcodeSubmit
+      // Geocode all postcodes using postcodes.io API directly
       const geocodedPreferences = await Promise.all(
         preferences.locations.map(async (pref) => {
           if (!pref.postcode) return null;
           
-          console.log("🔍 DEBUG: Processing preference:", JSON.stringify(pref, null, 2));
+          // Clean the postcode
+          const cleanedPostcode = pref.postcode.trim().replace(/\s+/g, '');
+          console.log("🔍 DEBUG: Processing preference with cleaned postcode:", cleanedPostcode);
           
-          const response = await fetch(`https://api.postcodes.io/postcodes/${pref.postcode}`);
-          const data = await response.json();
-          
-          if (!response.ok) {
-            console.error(`Failed to geocode postcode ${pref.postcode}`);
+          try {
+            const response = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(cleanedPostcode)}`);
+            
+            if (!response.ok) {
+              const errorData = await response.json();
+              console.error(`Failed to geocode postcode ${cleanedPostcode}:`, errorData);
+              return null;
+            }
+
+            const data = await response.json();
+            
+            if (data.status !== 200) {
+              console.error(`Failed to geocode postcode ${cleanedPostcode}:`, data.error);
+              return null;
+            }
+
+            const { latitude, longitude } = data.result;
+            
+            return {
+              ...pref,
+              postcode: cleanedPostcode, // Use cleaned postcode
+              lat: latitude,
+              lng: longitude,
+              timestamp: new Date().toISOString(),
+              id: `${pref.type}-${cleanedPostcode}`,
+              frequency: pref.frequency || 1
+            };
+          } catch (error) {
+            console.error(`Error processing postcode ${cleanedPostcode}:`, error);
             return null;
           }
-
-          const { latitude, longitude } = data.result;
-          
-          // Important! Use the exact type value without any modification
-          return {
-            ...pref,
-            // No type validation or default here - use the exact type from the form
-            lat: latitude,
-            lng: longitude,
-            timestamp: new Date().toISOString(),
-            id: `${pref.type}-${pref.postcode}`,  // Use the exact type in the ID
-            frequency: pref.frequency || 1  // Ensure frequency is never undefined
-          };
         })
       );
 
@@ -286,6 +304,10 @@ function Home() {
         type: loc.type, 
         frequency: loc.frequency 
       })));
+
+      if (validGeocoded.length === 0) {
+        throw new Error("No valid locations could be geocoded. Please check your postcodes and try again.");
+      }
 
       // Create the complete preferences object with both locations and weights
       const completePreferences = {
@@ -330,7 +352,7 @@ function Home() {
       }
     } catch (error) {
       console.error("Error processing travel preferences:", error);
-      alert("Failed to process travel preferences. Please try again.");
+      alert(error.message || "Failed to process travel preferences. Please try again.");
     }
   };
 

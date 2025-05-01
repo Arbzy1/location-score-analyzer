@@ -22,7 +22,7 @@ function SearchBar({ onSearchResults, onSearchStart }) {
       onSearchStart(query);
     }
     
-    const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/amenities`;
+    const apiUrl = `/api/amenities`;
     console.log("🌐 Making API request to:", apiUrl, "with query:", query);
     
     try {
@@ -57,6 +57,7 @@ function SearchBar({ onSearchResults, onSearchStart }) {
           console.groupEnd();
           
           onSearchResults(response.data.locations);
+          sessionStorage.setItem("searchResults", JSON.stringify(response.data.locations));
         } else {
           console.log("ℹ️ No locations found in response");
           onSearchResults([]);

@@ -25,12 +25,34 @@ gtfs_service = GTFSService()
 
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+    response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     response.headers.add('X-Frame-Options', 'SAMEORIGIN')
-    response.headers.add('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' http://localhost:5000 https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://api.mapbox.com https://events.mapbox.com http://192.168.1.162:8080; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';")
+    
+    # Add Content-Security-Policy header to allow Firebase and other necessary services
+    csp = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+        "https://www.googletagmanager.com https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com; "
+        "img-src 'self' data: https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com; "
+        "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com https://use.typekit.net; "
+        "connect-src 'self' http://localhost:5000 "
+        "https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com "
+        "https://identitytoolkit.googleapis.com https://firestore.googleapis.com "
+        "https://api.mapbox.com https://events.mapbox.com "
+        "https://api.postcodes.io http://192.168.1.162:8080 https://www.google-analytics.com; "
+        "frame-src 'self' https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com; "
+        "worker-src 'self' blob:; "
+        "manifest-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'self';"
+    )
+    response.headers.add('Content-Security-Policy', csp)
     return response
 
 def get_nearest_amenity(pt, gdf):

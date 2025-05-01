@@ -51,7 +51,21 @@
     <meta name="msapplication-config" content="/browserconfig.xml" />
     
     <!-- Security Headers -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:5000 https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://api.mapbox.com https://events.mapbox.com http://192.168.1.162:8080; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self' http://localhost:5000 https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://api.mapbox.com https://events.mapbox.com http://192.168.1.162:8080; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    <meta http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src  'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com;
+        style-src   'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com;
+        style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com;
+        font-src    'self' data: http://localhost:5173 https://fonts.gstatic.com https://fonts.googleapis.com https://use.typekit.net;
+        connect-src 'self' http://localhost:5000 https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com
+                    https://identitytoolkit.googleapis.com https://firestore.googleapis.com 
+                    https://api.mapbox.com https://events.mapbox.com
+                    https://api.postcodes.io http://192.168.1.162:8080 https://www.google-analytics.com;
+        worker-src  'self' blob:;
+        img-src     'self' data: https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com;
+        frame-src   'self' https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com;
+      ">
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />

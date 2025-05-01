@@ -43,9 +43,15 @@ function PostcodeInput({
     }
 
     try {
-      const response = await fetch(`https://api.postcodes.io/postcodes/${postcode}`);
-      const data = await response.json();
+      const response = await fetch(`http://localhost:5000/api/postcode/${encodeURIComponent(postcode)}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${errorText}`);
+      }
 
+      const data = await response.json();
+      
       if (data.status === 200) {
         const newLocation = {
           id: Date.now().toString(),
@@ -62,11 +68,11 @@ function PostcodeInput({
         setLabel('');
         setSuccess('Location added successfully!');
       } else {
-        setError('Invalid postcode');
+        setError(data.error || 'Invalid postcode');
       }
     } catch (error) {
       console.error('Error:', error);
-      setError('Error processing postcode');
+      setError(error.message || 'Error processing postcode');
     }
   };
 
