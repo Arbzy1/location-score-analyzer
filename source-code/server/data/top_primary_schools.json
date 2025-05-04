@@ -1,0 +1,12 @@
+{
+  "Marlborough Primary School": { "rating": "Excellent", "rank": 1, "postcode": "CF23 5BU" },
+  "Howell's School": { "rating": "Excellent", "rank": 2, "postcode": "CF24 0AB" },
+  "Roath Park Primary School": { "rating": "Excellent", "rank": 3, "postcode": "CF23 5HL" },
+  "Rhiwbina Primary School": { "rating": "Excellent", "rank": 4, "postcode": "CF14 6NX" },
+  "Lakeside Primary School": { "rating": "Excellent", "rank": 5, "postcode": "CF23 6UL" },
+  "Ysgol Mynydd Bychan": { "rating": "Excellent", "rank": 6, "postcode": "CF14 3JL" },
+  "Coed Glas Primary School": { "rating": "Good", "rank": 7, "postcode": "CF14 5DL" },
+  "St Joseph's R.C. Primary School": { "rating": "Good", "rank": 8, "postcode": "CF14 4BS" },
+  "Birchgrove Primary School": { "rating": "Good", "rank": 9, "postcode": "CF14 1RR" },
+  "Llanishen Fach Primary School": { "rating": "Good", "rank": 10, "postcode": "CF14 0PT" }
+} 

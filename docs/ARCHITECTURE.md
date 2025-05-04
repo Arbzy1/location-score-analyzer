@@ -2,19 +2,19 @@
 
 ## System Architecture
 
-Location Score Analyzer follows a modern microservices architecture with the following components:
+Location Score Analyzer follows a modern client-server architecture with the following components:
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   React Frontend│     │  Flask Backend  │     │   Database      │
-│   (Vite)        │◄───►│  (Python)       │◄───►│   (PostgreSQL)  │
+│   React Frontend│     │  Flask Backend  │     │   Firebase      │
+│   (Vite)        │◄───►│  (Python)       │◄───►│   (Firestore)   │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
         ▲                       ▲                       ▲
         │                       │                       │
         ▼                       ▼                       ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Google Maps   │     │  Public Transport│     │   OpenStreetMap │
-│      API        │     │      API        │     │      API        │
+│   Mapbox GL     │     │OpenTripPlanner  │     │   OpenRouteService │
+│                 │     │    (OTP)        │     │       (ORS)     │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
@@ -27,7 +27,8 @@ Location Score Analyzer follows a modern microservices architecture with the fol
   - Vite
   - React Router
   - CSS Modules
-  - Leaflet Maps
+  - Mapbox GL (not Leaflet)
+  - Firebase Authentication
 
 - **Key Features**
   - Component-based architecture
@@ -35,6 +36,8 @@ Location Score Analyzer follows a modern microservices architecture with the fol
   - Real-time updates
   - Interactive maps
   - Score visualization
+  - Transport mode comparison
+  - System transparency displays
 
 - **Directory Structure**
   ```
@@ -55,50 +58,75 @@ Location Score Analyzer follows a modern microservices architecture with the fol
 - **Technology Stack**
   - Python 3.8+
   - Flask
-  - SQLAlchemy
-  - Celery
-  - Redis
+  - Pandas
+  - Requests
+  - OSMNX (OpenStreetMap for Python)
 
 - **Key Features**
   - RESTful API
-  - Async task processing
-  - Caching
-  - Rate limiting
-  - Authentication
+  - CORS support
+  - Multi-modal transport routing
+  - Transit accessibility analysis
+  - LRU Caching for route calculations
 
 - **Directory Structure**
   ```
   server/
-  ├── app/
-  │   ├── api/
-  │   ├── models/
-  │   ├── services/
-  │   ├── utils/
-  │   └── config/
-  ├── tests/
-  └── migrations/
+  ├── app.py
+  ├── gtfs_service.py
+  ├── otp.py
+  └── utils/
   ```
 
-### Database (PostgreSQL)
+### Database (Firebase)
 
-- **Schema**
-  - Locations
-  - Scores
-  - Amenities
-  - Transit Routes
-  - User Preferences
+- **Services Used**
+  - Firestore (NoSQL database)
+  - Firebase Authentication
+  - Firebase Storage
+  - Firebase Analytics
 
 - **Key Features**
-  - ACID compliance
-  - Spatial queries
-  - Full-text search
-  - Connection pooling
+  - Real-time data sync
+  - User authentication
+  - Document-based storage
+  - Cloud storage for assets
+
+## Transport System Architecture
+
+### OpenRouteService (ORS)
+
+- **Purpose**: Calculates travel times and routes for driving, cycling, and walking
+- **Integration**: REST API calls from the backend
+- **Features**:
+  - Turn-by-turn directions
+  - Distance calculations
+  - Duration estimates
+  - Route geometries
+
+### OpenTripPlanner (OTP)
+
+- **Purpose**: Calculates public transit journeys (bus routes)
+- **Integration**: GraphQL API calls from the backend
+- **Features**:
+  - Multi-modal routing (transit + walking)
+  - Schedule-based routing
+  - Real-time updates (if GTFS-RT data available)
+  - Fare calculations
+  - Accessibility analysis
+
+### Transport Mode Selection
+
+- **Global Mode**: User can select a preferred transport mode for all destinations
+- **Per-Destination Mode**: Individual transport modes can be set for specific destinations
+- **Auto Mode**: System automatically selects the fastest transport mode for each journey
+- **Fallback System**: When bus transit is unavailable, system falls back to alternative modes
 
 ## Data Flow
 
 1. **Location Analysis Request**
    ```
-   User Input → Frontend → Backend API → External APIs → Database → Response
+   User Input → Frontend → Backend API → External APIs → Response → Firestore
    ```
 
 2. **Score Calculation**
@@ -106,7 +134,12 @@ Location Score Analyzer follows a modern microservices architecture with the fol
    Location Data → Travel Analysis → Amenity Analysis → Transit Analysis → Final Score
    ```
 
-3. **Data Caching**
+3. **Transport Calculation**
+   ```
+   Origin/Destination → Mode Selection → Route Calculation → Travel Time → Score Component
+   ```
+
+4. **Data Caching**
    ```
    Request → Cache Check → External API (if needed) → Cache Update → Response
    ```
@@ -114,20 +147,15 @@ Location Score Analyzer follows a modern microservices architecture with the fol
 ## Security Architecture
 
 - **Authentication**
-  - JWT tokens
-  - API key management
-  - Role-based access control
+  - Firebase Authentication
+  - Google Sign-in
+  - Content Security Policy
 
 - **Data Protection**
   - HTTPS encryption
   - Input validation
-  - SQL injection prevention
+  - Cross-Origin Resource Sharing (CORS) controls
   - XSS protection
-
-- **Rate Limiting**
-  - Request throttling
-  - IP-based limits
-  - User-based limits
 
 ## Deployment Architecture
 
@@ -137,24 +165,24 @@ Location Score Analyzer follows a modern microservices architecture with the fol
 └───────────────────────────┬─────────────────────────────┘
                             │
 ┌───────────────────────────┼─────────────────────────────┐
-│                           │                           │
-│    ┌──────────────┐      │      ┌──────────────┐      │
-│    │  Frontend    │      │      │  Frontend    │      │
-│    │  Container   │      │      │  Container   │      │
-│    └──────────────┘      │      └──────────────┘      │
-│                          │                           │
-│    ┌──────────────┐      │      ┌──────────────┐      │
-│    │  Backend     │      │      │  Backend     │      │
-│    │  Container   │      │      │  Container   │      │
-│    └──────────────┘      │      └──────────────┘      │
-│                          │                           │
+│                           │                             │
+│    ┌──────────────┐       │      ┌──────────────┐       │
+│    │  Frontend    │       │      │  Frontend    │       │
+│    │  Container   │       │      │  Container   │       │
+│    └──────────────┘       │      └──────────────┘       │
+│                           │                             │
+│    ┌──────────────┐       │      ┌──────────────┐       │
+│    │  Backend     │       │      │  Backend     │       │
+│    │  Container   │       │      │  Container   │       │
+│    └──────────────┘       │      └──────────────┘       │
+│                           │                             │
 └───────────────────────────┼─────────────────────────────┘
                             │
 ┌───────────────────────────┼─────────────────────────────┐
-│    ┌──────────────┐      │      ┌──────────────┐      │
-│    │  Database    │      │      │   Cache      │      │
-│    │  Container   │      │      │   Container  │      │
-│    └──────────────┘      │      └──────────────┘      │
+│    ┌──────────────┐       │      ┌──────────────┐       │
+│    │  Firebase    │       │      │   OTP        │       │
+│    │  Cloud       │       │      │   Container  │       │
+│    └──────────────┘       │      └──────────────┘       │
 └───────────────────────────┴─────────────────────────────┘
 ```
 
@@ -167,30 +195,28 @@ Location Score Analyzer follows a modern microservices architecture with the fol
   - Service worker caching
 
 - **Backend**
-  - Connection pooling
-  - Query optimization
-  - Caching strategies
-  - Async processing
+  - LRU caching for route calculations
+  - Request throttling
+  - Asynchronous processing
 
-- **Database**
-  - Indexing
-  - Query optimization
-  - Partitioning
-  - Regular maintenance
+- **Firebase**
+  - Denormalized data structure
+  - Batched writes
+  - Indexed queries
 
 ## Monitoring and Logging
 
 - **Application Monitoring**
   - Error tracking
   - Performance metrics
-  - User analytics
+  - User analytics (Firebase Analytics)
   - Resource usage
 
 - **Infrastructure Monitoring**
   - Server health
   - Network status
-  - Database performance
-  - Cache hit rates
+  - OTP and ORS service availability
+  - Firebase usage and quotas
 
 ## Future Considerations
 
@@ -202,17 +228,17 @@ Location Score Analyzer follows a modern microservices architecture with the fol
 
 - **Features**
   - Machine learning integration
-  - Real-time updates
+  - Real-time transit updates
   - Mobile applications
   - Advanced analytics
+  - Additional transport modes (e.g., trams, trains)
 
 ## Development Workflow
 
 1. **Local Development**
-   - Docker containers
    - Hot reloading
    - Mock services
-   - Local databases
+   - Local API testing
 
 2. **Testing**
    - Unit tests

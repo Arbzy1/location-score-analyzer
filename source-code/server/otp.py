@@ -19,6 +19,51 @@ def check_otp_server():
         print(f"Error checking OTP server: {e}")
         return False
 
+def run_otp_query(query_string, variables=None):
+    """
+    Run a GraphQL query against the OTP server.
+    
+    Args:
+        query_string (str): The GraphQL query string
+        variables (dict, optional): Variables to include with the query
+        
+    Returns:
+        dict: The response data or None if there was an error
+    """
+    try:
+        # GraphQL endpoint
+        url = "http://localhost:8080/otp/routers/default/index/graphql"
+        
+        # Prepare the request payload
+        payload = {
+            "query": query_string
+        }
+        
+        if variables:
+            payload["variables"] = variables
+            
+        # Make the request
+        response = requests.post(url, json=payload, timeout=15)
+        
+        # Check if the request was successful
+        if response.status_code != 200:
+            print(f"Error: OTP GraphQL server returned status code {response.status_code}")
+            print(f"Response: {response.text}")
+            return None
+        
+        # Parse the JSON response
+        data = response.json()
+        
+        # Check for GraphQL errors
+        if "errors" in data:
+            print("GraphQL errors:", data["errors"])
+            return None
+            
+        return data
+    except Exception as e:
+        print(f"Error making GraphQL request: {e}")
+        return None
+
 def list_available_routers():
     try:
         response = requests.get("http://localhost:8080/otp/routers", timeout=5)

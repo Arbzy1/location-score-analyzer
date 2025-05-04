@@ -171,7 +171,11 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
           name: amenity.name,
           distance: amenity.distance,
           color: color,
-          icon: icon
+          icon: icon,
+          isTopSchool: type.toLowerCase() === 'school' && amenity.is_top_rated,
+          rank: amenity.rank,
+          rating: amenity.rating,
+          schoolType: amenity.school_type
         },
         geometry: {
           type: 'Point',
@@ -274,40 +278,27 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
           const coordinates = feature.geometry.coordinates.slice();
           const properties = feature.properties;
           
-          // Create popup
-          const popupHTML = `
-            <div class="popup-content">
-              <h3 class="popup-title">${properties.name}</h3>
-              <div class="info-row">
-                <span>Type</span>
-                <span>${properties.type}</span>
-              </div>
-              <div class="info-row">
-                <span>Distance</span>
-                <span>${properties.distance}m</span>
-              </div>
-              <div class="popup-actions">
-                <div class="routing-buttons">
-                  <button class="set-start-btn" data-lat="${coordinates[1]}" data-lon="${coordinates[0]}">Set as Start Point</button>
-                  <button class="set-end-btn" data-lat="${coordinates[1]}" data-lon="${coordinates[0]}">Set as End Point</button>
-                </div>
-                ${selectedStartMarker || selectedEndMarker ? `
-                  <button class="clear-route-btn">Clear Route</button>
-                ` : ''}
-              </div>
+          let popupContent = `
+            <div class="popup-content amenity-popup">
+              <h3 class="popup-title">${properties.icon} ${properties.name}</h3>
+              <p>Type: ${properties.type}</p>
+              <p>Distance: ${properties.distance}m</p>
+              ${properties.isTopSchool ? 
+                `<p class="top-school-badge ${properties.schoolType || 'unknown'}-school" style="margin-top:8px;display:inline-block;">
+                  ${properties.schoolType === "primary" ? '🏫' : '🎓'} 
+                  ${properties.rank <= 3 ? '🥇' : properties.rank <= 10 ? '🥈' : '🌟'} 
+                  Rank ${properties.rank} ${properties.schoolType === "primary" ? "Primary" : "Secondary"} School
+                </p>
+                <p>Rating: ${properties.rating}</p>` 
+                : ''}
             </div>
           `;
           
-          // Create a popup and set its content
-          new mapboxgl.Popup({ 
-            offset: [0, -20],
-            className: 'amenity-popup',
-            closeButton: true,
-            closeOnClick: false
-          })
-          .setLngLat(coordinates)
-          .setHTML(popupHTML)
-          .addTo(map.current);
+          // Create a popup
+          new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(popupContent)
+            .addTo(map.current);
         }
       });
       

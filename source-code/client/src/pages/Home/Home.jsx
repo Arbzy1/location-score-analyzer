@@ -97,10 +97,12 @@ function Home() {
                 hospital: 15,
                 supermarket: 10
               },
-              travelMode: userData.travelPreferences.travelMode || 'auto'
+              travelMode: userData.travelPreferences.travelMode || 'auto',
+              schoolFilter: userData.travelPreferences.schoolFilter || 'both'
             });
 
             console.log('Loaded travel mode:', userData.travelPreferences.travelMode || 'auto');
+            console.log('Loaded school filter:', userData.travelPreferences.schoolFilter || 'both');
             
             // Also update the travelMode state
             setTravelMode(userData.travelPreferences.travelMode || 'auto');
@@ -115,7 +117,9 @@ function Home() {
                 school: 15,
                 hospital: 15,
                 supermarket: 10
-              }
+              },
+              travelMode: 'auto',
+              schoolFilter: 'both'
             },
             createdAt: new Date().toISOString(),
             email: currentUser.email
@@ -342,7 +346,8 @@ function Home() {
       const completePreferences = {
         locations: validGeocoded,
         amenityWeights: preferences.amenityWeights,
-        travelMode: preferences.travelMode
+        travelMode: preferences.travelMode,
+        schoolFilter: preferences.schoolFilter
       };
 
       console.log("🔍 DEBUG: Complete preferences:", JSON.stringify(completePreferences, null, 2));
@@ -884,12 +889,18 @@ function Home() {
                                     if (!amenity || !amenity.weight) return null;
                                     return (
                                       <li key={type}>
-                                        {type}: {amenity.name} ({amenity.distance}m)
-                                        <ul>
-                                          <li>Weight in calculation: {amenity.weight}%</li>
-                                          <li>Distance-adjusted score: {amenity.score.toFixed(1)}/{amenity.weight}</li>
-                                          <li>Distance threshold: {type === 'hospital' ? '3km' : '1km'}</li>
-                                        </ul>
+                                        <span className="amenity-type">{type}:</span>
+                                        <div className="amenity-details">
+                                          <span>{amenity.name || type} ({amenity.distance}m)</span>
+                                          {type === "school" && amenity.is_top_rated && (
+                                            <span className={`badge top-school-badge ${amenity.school_type || 'unknown'}-school`}>
+                                              {amenity.school_type === "primary" ? '🏫' : '🎓'} 
+                                              {amenity.rank <= 3 ? '🥇' : amenity.rank <= 10 ? '🥈' : '🌟'} 
+                                              Rank {amenity.rank} {amenity.school_type === "primary" ? "Primary" : "Secondary"} School
+                                            </span>
+                                          )}
+                                          <span className="amenity-score">Score: {amenity.score.toFixed(1)}/{amenity.weight}</span>
+                                        </div>
                                       </li>
                                     );
                                   })}
@@ -935,6 +946,13 @@ function Home() {
                                   <span className="amenity-type">{type}:</span>
                                   <div className="amenity-details">
                                     <span>{amenity.name || type} ({amenity.distance}m)</span>
+                                    {type === "school" && amenity.is_top_rated && (
+                                      <span className={`badge top-school-badge ${amenity.school_type || 'unknown'}-school`}>
+                                        {amenity.school_type === "primary" ? '🏫' : '🎓'} 
+                                        {amenity.rank <= 3 ? '🥇' : amenity.rank <= 10 ? '🥈' : '🌟'} 
+                                        Rank {amenity.rank} {amenity.school_type === "primary" ? "Primary" : "Secondary"} School
+                                      </span>
+                                    )}
                                     <span className="amenity-score">Score: {amenity.score.toFixed(1)}/{amenity.weight}</span>
                                   </div>
                                 </li>

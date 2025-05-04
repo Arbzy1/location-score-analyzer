@@ -53,10 +53,23 @@ export function AmenityCard({ item, index }) {
             <h5>{type.charAt(0).toUpperCase() + type.slice(1)}</h5>
             <p>
               <strong>{amenity.name}</strong>
+              {type === "school" && amenity.is_top_rated && (
+                <span className={`badge top-school-badge ${amenity.school_type || 'unknown'}-school`}>
+                  {amenity.school_type === "primary" ? '🏫' : '🎓'} 
+                  {amenity.rank <= 3 ? '🥇' : amenity.rank <= 10 ? '🥈' : '🌟'} 
+                  Rank {amenity.rank} {amenity.school_type === "primary" ? "Primary" : "Secondary"} School
+                </span>
+              )}
               <br />
               Distance: {amenity.distance}m
               <br />
               Score: {amenity.score.toFixed(1)}/{amenity.weight}
+              {type === "school" && amenity.is_top_rated && (
+                <>
+                  <br />
+                  <span className="rating-text">Estyn Rating: {amenity.rating}</span>
+                </>
+              )}
             </p>
             <a 
               href={`https://www.google.com/maps?q=${amenity.lat},${amenity.lon}`}

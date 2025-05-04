@@ -1,0 +1,21 @@
+{
+  "Cardiff High School": { "rating": "Excellent", "rank": 1, "postcode": "CF23 6WG" },
+  "The Bishop of Llandaff CiW High School": { "rating": "Excellent", "rank": 2, "postcode": "CF5 2NR" },
+  "Ysgol Gyfun Gymraeg Glantaf": { "rating": "Good", "rank": 3, "postcode": "CF14 2JL" },
+  "Corpus Christi Catholic High School": { "rating": "Good", "rank": 4, "postcode": "CF23 6XL" },
+  "Radyr Comprehensive School": { "rating": "Good", "rank": 5, "postcode": "CF15 8XG" },
+  "Llanishen High School": { "rating": "Good", "rank": 6, "postcode": "CF14 5YL" },
+  "Ysgol Gyfun Gymraeg Plasmawr": { "rating": "Good", "rank": 7, "postcode": "CF5 3PZ" },
+  "Whitchurch High School": { "rating": "Good", "rank": 8, "postcode": "CF14 2XJ" },
+  "Whitchurch High School (Upper)": { "rating": "Good", "rank": 8, "postcode": "CF14 2XJ" },
+  "Fitzalan High School": { "rating": "Good", "rank": 9, "postcode": "CF11 8XB" },
+  "St Teilo's CW High School": { "rating": "Good", "rank": 10, "postcode": "CF23 9PD" },
+  "Cathays High School": { "rating": "Good", "rank": 11, "postcode": "CF14 3XG" },
+  "Ysgol Gyfun Gymraeg Bro Edern": { "rating": "Good", "rank": 12, "postcode": "CF23 9DT" },
+  "Mary Immaculate High School": { "rating": "Good", "rank": 13, "postcode": "CF5 5QZ" },
+  "Cantonian High School": { "rating": "Adequate", "rank": 14, "postcode": "CF5 3JR" },
+  "St Illtyd's Catholic High School": { "rating": "Good", "rank": 15, "postcode": "CF3 1XQ" },
+  "Willows High School": { "rating": "Adequate", "rank": 16, "postcode": "CF24 2YE" },
+  "Cardiff West Community High School": { "rating": "Adequate", "rank": 17, "postcode": "CF5 5XP" },
+  "Eastern High School": { "rating": "Adequate", "rank": 18, "postcode": "CF3 3XG" }
+} 

@@ -62,3 +62,47 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Top School Badge */
+.top-school-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+/* Primary school badge (blue theme) */
+.primary-school {
+  background-color: #2196f3;
+  color: white;
+}
+
+/* Secondary school badge (yellow theme) */
+.secondary-school {
+  background-color: #ffeb3b;
+  color: #333;
+}
+
+/* Unknown school type */
+.unknown-school {
+  background-color: #9e9e9e;
+  color: white;
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+  }
+  to {
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  }
+}
+
+.rating-text {
+  color: #2196f3;
+  font-weight: 500;
+}

@@ -12,6 +12,7 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
   const [showTips, setShowTips] = useState(false);
   const [travelMode, setTravelMode] = useState('auto');
   const [showTravelModeTips, setShowTravelModeTips] = useState(false);
+  const [schoolFilter, setSchoolFilter] = useState('both'); // 'primary', 'secondary', or 'both'
 
   // Load saved preferences if they exist
   useEffect(() => {
@@ -34,6 +35,9 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
         if (savedPreferences.travelMode) {
           setTravelMode(savedPreferences.travelMode);
         }
+        if (savedPreferences.schoolFilter) {
+          setSchoolFilter(savedPreferences.schoolFilter);
+        }
       }
     }
   }, [savedPreferences]);
@@ -43,11 +47,21 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const validLocations = locations.filter(loc => loc.postcode && loc.type && loc.frequency);
-    onSubmit({
+    
+    // Prepare the data object with all preferences
+    const preferencesData = {
       locations: validLocations,
       amenityWeights,
-      travelMode
-    });
+      travelMode,
+      schoolFilter
+    };
+    
+    // Log preferences to help with debugging
+    console.log("Submitting travel preferences:", preferencesData);
+    console.log("School filter selected:", schoolFilter);
+    
+    // Submit to parent component
+    onSubmit(preferencesData);
   };
 
   const addLocation = () => {
@@ -199,6 +213,48 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
             />
           </div>
         </div>
+        
+        {/* School Type Filter */}
+        {amenityWeights.school > 0 && (
+          <div className="school-filter-section">
+            <h4>School Type Preference</h4>
+            <div className="school-filter-options">
+              <label>
+                <input
+                  type="radio"
+                  name="schoolFilter"
+                  value="both"
+                  checked={schoolFilter === 'both'}
+                  onChange={(e) => setSchoolFilter(e.target.value)}
+                />
+                Both Primary and Secondary Schools
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="schoolFilter"
+                  value="primary"
+                  checked={schoolFilter === 'primary'}
+                  onChange={(e) => setSchoolFilter(e.target.value)}
+                />
+                Primary Schools Only
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="schoolFilter"
+                  value="secondary"
+                  checked={schoolFilter === 'secondary'}
+                  onChange={(e) => setSchoolFilter(e.target.value)}
+                />
+                Secondary Schools Only
+              </label>
+            </div>
+            <p className="school-filter-note">
+              Choose which types of schools are most important for your search.
+            </p>
+          </div>
+        )}
         
         <div className="total-weight">
           Total Weight: {totalWeight}%

@@ -13,8 +13,45 @@ import time
 import pandas as pd
 import json
 from gtfs_service import GTFSService
+from flask_cors import CORS
+import numpy as np
+from shapely.geometry import Point, Polygon, box
+import logging
+from datetime import datetime, timedelta
+from otp import run_otp_query
+
+# Load top-rated schools data
+TOP_SECONDARY_SCHOOLS_FILE = os.path.join(os.path.dirname(__file__), 'data', 'top_schools.json')
+TOP_PRIMARY_SCHOOLS_FILE = os.path.join(os.path.dirname(__file__), 'data', 'top_primary_schools.json')
+top_secondary_schools_dict = {}
+top_primary_schools_dict = {}
+all_top_schools_dict = {}
+
+try:
+    # Load secondary schools
+    if os.path.exists(TOP_SECONDARY_SCHOOLS_FILE):
+        with open(TOP_SECONDARY_SCHOOLS_FILE, 'r') as f:
+            top_secondary_schools_dict = json.load(f)
+        print(f"✅ Loaded {len(top_secondary_schools_dict)} top-rated secondary schools")
+    else:
+        print(f"⚠️ Top secondary schools file not found at {TOP_SECONDARY_SCHOOLS_FILE}")
+        
+    # Load primary schools
+    if os.path.exists(TOP_PRIMARY_SCHOOLS_FILE):
+        with open(TOP_PRIMARY_SCHOOLS_FILE, 'r') as f:
+            top_primary_schools_dict = json.load(f)
+        print(f"✅ Loaded {len(top_primary_schools_dict)} top-rated primary schools")
+    else:
+        print(f"⚠️ Top primary schools file not found at {TOP_PRIMARY_SCHOOLS_FILE}")
+    
+    # Combine both dictionaries
+    all_top_schools_dict = {**top_secondary_schools_dict, **top_primary_schools_dict}
+    print(f"✅ Combined {len(all_top_schools_dict)} top-rated schools total")
+except Exception as e:
+    print(f"❌ Error loading top schools data: {str(e)}")
 
 app = Flask(__name__)
+CORS(app)
 
 print("Server: Starting up Flask application...")
 ox.settings.use_cache = False
@@ -131,6 +168,42 @@ def get_nearest_amenity(pt, gdf):
             nearest_row = row
     return min_distance, nearest_row
 
+def get_nearest_school_by_type(pt, schools_gdf, school_type, top_schools_dict):
+    """Find the nearest school of a specific type (primary or secondary)."""
+    if schools_gdf.empty:
+        return None, None
+        
+    transformer = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    pt_proj = transform(transformer.transform, pt)
+    
+    # Create a list to store schools and their distances
+    school_distances = []
+    
+    for idx, row in schools_gdf.iterrows():
+        geom = row.geometry
+        school_name = row.get("name", "")
+        
+        # Skip schools without names
+        if not school_name:
+            continue
+            
+        # Determine if this is the right type of school
+        detected_type = get_school_type(school_name, top_primary_schools_dict, top_secondary_schools_dict)
+        is_right_type = (detected_type == school_type)
+        
+        # If it's the right type, calculate distance
+        if is_right_type:
+            amenity_proj = transform(transformer.transform, geom)
+            d = pt_proj.distance(amenity_proj)
+            school_distances.append((d, row))
+    
+    # Sort by distance and return the closest one
+    if school_distances:
+        school_distances.sort(key=lambda x: x[0])
+        return school_distances[0]
+    
+    return None, None
+
 def generate_random_points(polygon, num_points):
     """Generate random points within a polygon"""
     points = []
@@ -229,6 +302,30 @@ def get_area_names(bbox):
         print(f"⚠️ Error retrieving area names: {e}")
         return []
 
+def get_school_type(school_name, top_primary_dict, top_secondary_dict):
+    """Safely determine a school's type (primary or secondary) based on name and top schools lists."""
+    try:
+        # Ensure school name is a string
+        name_str = str(school_name) if school_name is not None else ""
+        
+        # First check if it's in our top schools lists
+        if name_str in top_secondary_dict:
+            return "secondary"
+        elif name_str in top_primary_dict:
+            return "primary"
+        
+        # Otherwise guess from name
+        name_lower = name_str.lower()
+        if any(keyword in name_lower for keyword in ["primary", "junior", "infant", "elementary"]):
+            return "primary"
+        elif any(keyword in name_lower for keyword in ["secondary", "high", "comprehensive", "academy", "college"]):
+            return "secondary"
+        else:
+            return "unknown"
+    except Exception as e:
+        print(f"⚠️ Error determining school type: {str(e)}")
+        return "unknown"
+
 def analyze_location(city, travel_preferences=None):
     print(f"🔍 Starting analysis for {city}...")
     print(f"🔄 Travel preferences received: {travel_preferences}")
@@ -251,6 +348,19 @@ def analyze_location(city, travel_preferences=None):
         else:
             print(f"🚗 Using default travel mode: {travel_mode}")
 
+        # Get school filter preference
+        school_filter = 'both'  # default to both primary and secondary
+        if travel_preferences and 'schoolFilter' in travel_preferences:
+            school_filter = travel_preferences['schoolFilter']
+            print(f"🏫 Using school filter from preferences: {school_filter}")
+        else:
+            print(f"🏫 Using default school filter: {school_filter}")
+
+        # Error handling for school filter
+        if school_filter not in ['primary', 'secondary', 'both']:
+            print(f"⚠️ Invalid school filter value: {school_filter}, using default 'both'")
+            school_filter = 'both'
+
         # Generate points
         print("🎲 Generating random points...")
         num_candidates = 20
@@ -259,8 +369,124 @@ def analyze_location(city, travel_preferences=None):
 
         # Get amenities
         print("🏫 Retrieving amenities...")
-        schools = ox.features_from_place(city, {"amenity": "school"})
-        print("✅ Schools retrieved")
+        schools = None
+
+        if school_filter == 'secondary' or school_filter == 'both':
+            # Look specifically for secondary schools using ISCED level tags
+            secondary_schools_query = {
+                "amenity": "school",
+                "isced:level": ["2", "3", "2;3"]  # ISCED levels 2-3 correspond to secondary education
+            }
+            
+            # Try to get schools with ISCED level tags first
+            try:
+                schools_isced = ox.features_from_place(city, secondary_schools_query, which_result=None)
+                print(f"Found {len(schools_isced)} schools with ISCED level tags")
+                schools = schools_isced
+            except Exception as e:
+                print(f"Error getting schools with ISCED tags: {e}")
+                schools = gpd.GeoDataFrame()
+            
+            # If no secondary schools found with ISCED tags, fall back to all schools and filter after
+            if schools.empty:
+                print("⚠️ No secondary schools found using ISCED tags. Getting all schools.")
+                try:
+                    all_schools = ox.features_from_place(city, {"amenity": "school"})
+                    
+                    # Try to filter for likely secondary schools by name keywords
+                    if not all_schools.empty:
+                        name_filters = ["secondary", "high", "comprehensive", "academy", "college"]
+                        secondary_schools_mask = all_schools["name"].str.lower().apply(
+                            lambda x: any(keyword in str(x).lower() for keyword in name_filters) if pd.notna(x) else False
+                        )
+                        filtered_schools = all_schools[secondary_schools_mask]
+                        
+                        # If we found some secondary schools by name, use those
+                        if not filtered_schools.empty:
+                            schools = filtered_schools
+                            print(f"Filtered to {len(schools)} secondary schools by name")
+                        
+                        # Also filter for known secondary schools from our list
+                        top_school_names = set(top_secondary_schools_dict.keys())
+                        if top_school_names:
+                            top_schools_mask = all_schools["name"].isin(top_school_names)
+                            top_schools_found = all_schools[top_schools_mask]
+                            
+                            # If we have both filtered schools and top schools, combine them
+                            if not top_schools_found.empty:
+                                if not filtered_schools.empty:
+                                    schools = pd.concat([filtered_schools, top_schools_found]).drop_duplicates()
+                                else:
+                                    schools = top_schools_found
+                                print(f"Added {len(top_schools_found)} top-rated schools from our list")
+                except Exception as e:
+                    print(f"Error getting all schools: {e}")
+                    if schools is None:
+                        schools = gpd.GeoDataFrame()
+            
+            print(f"✅ Secondary schools retrieved: {len(schools) if schools is not None else 0} found")
+        
+        if school_filter == 'primary' or school_filter == 'both':
+            # Get primary schools
+            primary_schools_query = {
+                "amenity": "school",
+                "isced:level": ["0", "1", "0;1"]  # ISCED levels 0-1 correspond to primary education
+            }
+            
+            # Try to get primary schools with ISCED level tags first
+            try:
+                primary_schools_isced = ox.features_from_place(city, primary_schools_query, which_result=None)
+                print(f"Found {len(primary_schools_isced)} primary schools with ISCED level tags")
+                
+                # Combine with existing schools if needed
+                if schools is not None and not schools.empty and school_filter == 'both':
+                    schools = pd.concat([schools, primary_schools_isced]).drop_duplicates()
+                else:
+                    schools = primary_schools_isced
+            except Exception as e:
+                print(f"Error getting primary schools with ISCED tags: {e}")
+                
+                # If failed to get by ISCED, try name-based search
+                try:
+                    all_schools = ox.features_from_place(city, {"amenity": "school"})
+                    
+                    # Filter for likely primary schools by name keywords
+                    if not all_schools.empty:
+                        name_filters = ["primary", "junior", "infant", "elementary"]
+                        primary_schools_mask = all_schools["name"].str.lower().apply(
+                            lambda x: any(keyword in str(x).lower() for keyword in name_filters) if pd.notna(x) else False
+                        )
+                        filtered_primary = all_schools[primary_schools_mask]
+                        
+                        # Also filter for known primary schools from our list
+                        top_primary_names = set(top_primary_schools_dict.keys())
+                        if top_primary_names:
+                            top_primary_mask = all_schools["name"].isin(top_primary_names)
+                            top_primary_found = all_schools[top_primary_mask]
+                            
+                            # Combine filtered and top primary schools
+                            if not filtered_primary.empty or not top_primary_found.empty:
+                                primary_schools = pd.concat([filtered_primary, top_primary_found]).drop_duplicates()
+                                
+                                # Combine with existing schools if needed
+                                if schools is not None and not schools.empty and school_filter == 'both':
+                                    schools = pd.concat([schools, primary_schools]).drop_duplicates()
+                                else:
+                                    schools = primary_schools
+                                    
+                                print(f"Found {len(primary_schools)} primary schools by name/top list")
+                except Exception as e:
+                    print(f"Error getting primary schools by name: {e}")
+        
+        # If we still have no schools, fall back to all schools
+        if schools is None or schools.empty:
+            print("⚠️ No schools found with specific filters. Using all schools as fallback.")
+            try:
+                schools = ox.features_from_place(city, {"amenity": "school"})
+                print(f"✅ Fallback: Found {len(schools)} total schools")
+            except Exception as e:
+                print(f"Error getting all schools: {e}")
+                schools = gpd.GeoDataFrame()
         
         hospitals = ox.features_from_place(city, {"amenity": "hospital"})
         print("✅ Hospitals retrieved")
@@ -342,7 +568,7 @@ def analyze_location(city, travel_preferences=None):
                         # Store the amenity data and its score
                         if nearest is not None and nearest.geometry is not None:
                             centroid = nearest.geometry.centroid
-                            location_data["amenities"][a_type] = {
+                            amenity_data = {
                                 "name": nearest.get("name", "Unnamed"),
                                 "distance": int(distance),
                                 "lat": centroid.y,
@@ -350,13 +576,215 @@ def analyze_location(city, travel_preferences=None):
                                 "weight": weight,
                                 "score": weighted_score
                             }
+                            
+                            # Check if this is a top-rated school
+                            if a_type == "school" and nearest.get("name") in all_top_schools_dict:
+                                school_info = all_top_schools_dict[nearest.get("name")]
+                                amenity_data["is_top_rated"] = True
+                                amenity_data["rank"] = school_info["rank"]
+                                amenity_data["rating"] = school_info["rating"]
+                                
+                                # Add school type (primary or secondary)
+                                school_type = get_school_type(nearest.get("name"), top_primary_schools_dict, top_secondary_schools_dict)
+                                amenity_data["school_type"] = school_type
+                                
+                                print(f"✨ Found top-rated {amenity_data['school_type']} school: {nearest.get('name')} (Rank: {school_info['rank']})")
+                            
+                            # For schools, check if it matches the school filter preference
+                            if a_type == "school":
+                                # Make sure school type is set
+                                if "school_type" not in amenity_data:
+                                    school_type = get_school_type(nearest.get("name"), top_primary_schools_dict, top_secondary_schools_dict)
+                                    amenity_data["school_type"] = school_type
+                                
+                                # Check if this school should be filtered out based on user preference
+                                if school_filter == 'primary' and amenity_data.get("school_type") == "secondary":
+                                    print(f"⚠️ Filtering out secondary school '{nearest.get('name')}' as user only wants primary schools")
+                                    
+                                    # Find the nearest primary school instead
+                                    primary_distance, primary_school = get_nearest_school_by_type(pt, schools, "primary", top_primary_schools_dict)
+                                    if primary_distance is not None and primary_school is not None:
+                                        print(f"✅ Found alternative primary school: {primary_school.get('name', 'Unnamed')} at {int(primary_distance)}m")
+                                        
+                                        # Calculate new score
+                                        primary_distance_km = primary_distance / 1000
+                                        primary_score = max(0, 1 - (primary_distance_km / 2))
+                                        primary_weighted_score = primary_score * weight
+                                        
+                                        # Update amenity data
+                                        amenity_data = {
+                                            "name": primary_school.get("name", "Unnamed"),
+                                            "distance": int(primary_distance),
+                                            "lat": primary_school.geometry.centroid.y,
+                                            "lon": primary_school.geometry.centroid.x,
+                                            "weight": weight,
+                                            "score": primary_weighted_score,
+                                            "school_type": "primary"
+                                        }
+                                        
+                                        # Check if it's a top-rated primary school
+                                        if primary_school.get("name") in top_primary_schools_dict:
+                                            school_info = top_primary_schools_dict[primary_school.get("name")]
+                                            amenity_data["is_top_rated"] = True
+                                            amenity_data["rank"] = school_info["rank"]
+                                            amenity_data["rating"] = school_info["rating"]
+                                            print(f"✨ Found top-rated primary school: {primary_school.get('name')} (Rank: {school_info['rank']})")
+                                        
+                                        # Update score
+                                        amenity_score = amenity_score - weighted_score + primary_weighted_score
+                                        weighted_score = primary_weighted_score
+                                    else:
+                                        print(f"⚠️ Could not find any primary schools for this location")
+                                        continue  # Skip this amenity
+                                
+                                if school_filter == 'secondary' and amenity_data.get("school_type") == "primary":
+                                    print(f"⚠️ Filtering out primary school '{nearest.get('name')}' as user only wants secondary schools")
+                                    
+                                    # Find the nearest secondary school instead
+                                    secondary_distance, secondary_school = get_nearest_school_by_type(pt, schools, "secondary", top_secondary_schools_dict)
+                                    if secondary_distance is not None and secondary_school is not None:
+                                        print(f"✅ Found alternative secondary school: {secondary_school.get('name', 'Unnamed')} at {int(secondary_distance)}m")
+                                        
+                                        # Calculate new score
+                                        secondary_distance_km = secondary_distance / 1000
+                                        secondary_score = max(0, 1 - (secondary_distance_km / 2))
+                                        secondary_weighted_score = secondary_score * weight
+                                        
+                                        # Update amenity data
+                                        amenity_data = {
+                                            "name": secondary_school.get("name", "Unnamed"),
+                                            "distance": int(secondary_distance),
+                                            "lat": secondary_school.geometry.centroid.y,
+                                            "lon": secondary_school.geometry.centroid.x,
+                                            "weight": weight,
+                                            "score": secondary_weighted_score,
+                                            "school_type": "secondary"
+                                        }
+                                        
+                                        # Check if it's a top-rated secondary school
+                                        if secondary_school.get("name") in top_secondary_schools_dict:
+                                            school_info = top_secondary_schools_dict[secondary_school.get("name")]
+                                            amenity_data["is_top_rated"] = True
+                                            amenity_data["rank"] = school_info["rank"]
+                                            amenity_data["rating"] = school_info["rating"]
+                                            print(f"✨ Found top-rated secondary school: {secondary_school.get('name')} (Rank: {school_info['rank']})")
+                                        
+                                        # Update score
+                                        amenity_score = amenity_score - weighted_score + secondary_weighted_score
+                                        weighted_score = secondary_weighted_score
+                                    else:
+                                        print(f"⚠️ Could not find any secondary schools for this location")
+                                        continue  # Skip this amenity
+                            
+                            location_data["amenities"][a_type] = amenity_data
                         else:
-                            location_data["amenities"][a_type] = {
+                            amenity_data = {
                                 "name": nearest.get("name", "Unnamed"),
                                 "distance": int(distance),
                                 "weight": weight,
                                 "score": weighted_score
                             }
+                            
+                            # Check if this is a top-rated school
+                            if a_type == "school" and nearest.get("name") in all_top_schools_dict:
+                                school_info = all_top_schools_dict[nearest.get("name")]
+                                amenity_data["is_top_rated"] = True
+                                amenity_data["rank"] = school_info["rank"]
+                                amenity_data["rating"] = school_info["rating"]
+                                
+                                # Add school type (primary or secondary)
+                                school_type = get_school_type(nearest.get("name"), top_primary_schools_dict, top_secondary_schools_dict)
+                                amenity_data["school_type"] = school_type
+                                
+                                print(f"✨ Found top-rated {amenity_data['school_type']} school: {nearest.get('name')} (Rank: {school_info['rank']})")
+                            
+                            # For schools, check if it matches the school filter preference
+                            if a_type == "school":
+                                # Make sure school type is set
+                                if "school_type" not in amenity_data:
+                                    school_type = get_school_type(nearest.get("name"), top_primary_schools_dict, top_secondary_schools_dict)
+                                    amenity_data["school_type"] = school_type
+                                
+                                # Check if this school should be filtered out based on user preference
+                                if school_filter == 'primary' and amenity_data.get("school_type") == "secondary":
+                                    print(f"⚠️ Filtering out secondary school '{nearest.get('name')}' as user only wants primary schools")
+                                    
+                                    # Find the nearest primary school instead
+                                    primary_distance, primary_school = get_nearest_school_by_type(pt, schools, "primary", top_primary_schools_dict)
+                                    if primary_distance is not None and primary_school is not None:
+                                        print(f"✅ Found alternative primary school: {primary_school.get('name', 'Unnamed')} at {int(primary_distance)}m")
+                                        
+                                        # Calculate new score
+                                        primary_distance_km = primary_distance / 1000
+                                        primary_score = max(0, 1 - (primary_distance_km / 2))
+                                        primary_weighted_score = primary_score * weight
+                                        
+                                        # Update amenity data
+                                        amenity_data = {
+                                            "name": primary_school.get("name", "Unnamed"),
+                                            "distance": int(primary_distance),
+                                            "lat": primary_school.geometry.centroid.y,
+                                            "lon": primary_school.geometry.centroid.x,
+                                            "weight": weight,
+                                            "score": primary_weighted_score,
+                                            "school_type": "primary"
+                                        }
+                                        
+                                        # Check if it's a top-rated primary school
+                                        if primary_school.get("name") in top_primary_schools_dict:
+                                            school_info = top_primary_schools_dict[primary_school.get("name")]
+                                            amenity_data["is_top_rated"] = True
+                                            amenity_data["rank"] = school_info["rank"]
+                                            amenity_data["rating"] = school_info["rating"]
+                                            print(f"✨ Found top-rated primary school: {primary_school.get('name')} (Rank: {school_info['rank']})")
+                                        
+                                        # Update score
+                                        amenity_score = amenity_score - weighted_score + primary_weighted_score
+                                        weighted_score = primary_weighted_score
+                                    else:
+                                        print(f"⚠️ Could not find any primary schools for this location")
+                                        continue  # Skip this amenity
+                                
+                                if school_filter == 'secondary' and amenity_data.get("school_type") == "primary":
+                                    print(f"⚠️ Filtering out primary school '{nearest.get('name')}' as user only wants secondary schools")
+                                    
+                                    # Find the nearest secondary school instead
+                                    secondary_distance, secondary_school = get_nearest_school_by_type(pt, schools, "secondary", top_secondary_schools_dict)
+                                    if secondary_distance is not None and secondary_school is not None:
+                                        print(f"✅ Found alternative secondary school: {secondary_school.get('name', 'Unnamed')} at {int(secondary_distance)}m")
+                                        
+                                        # Calculate new score
+                                        secondary_distance_km = secondary_distance / 1000
+                                        secondary_score = max(0, 1 - (secondary_distance_km / 2))
+                                        secondary_weighted_score = secondary_score * weight
+                                        
+                                        # Update amenity data
+                                        amenity_data = {
+                                            "name": secondary_school.get("name", "Unnamed"),
+                                            "distance": int(secondary_distance),
+                                            "lat": secondary_school.geometry.centroid.y,
+                                            "lon": secondary_school.geometry.centroid.x,
+                                            "weight": weight,
+                                            "score": secondary_weighted_score,
+                                            "school_type": "secondary"
+                                        }
+                                        
+                                        # Check if it's a top-rated secondary school
+                                        if secondary_school.get("name") in top_secondary_schools_dict:
+                                            school_info = top_secondary_schools_dict[secondary_school.get("name")]
+                                            amenity_data["is_top_rated"] = True
+                                            amenity_data["rank"] = school_info["rank"]
+                                            amenity_data["rating"] = school_info["rating"]
+                                            print(f"✨ Found top-rated secondary school: {secondary_school.get('name')} (Rank: {school_info['rank']})")
+                                        
+                                        # Update score
+                                        amenity_score = amenity_score - weighted_score + secondary_weighted_score
+                                        weighted_score = secondary_weighted_score
+                                    else:
+                                        print(f"⚠️ Could not find any secondary schools for this location")
+                                        continue  # Skip this amenity
+                            
+                            location_data["amenities"][a_type] = amenity_data
                         
                         # Store score breakdown
                         amenity_breakdown[a_type] = {
@@ -706,23 +1134,50 @@ def get_amenities():
     
     try:
         # Parse travel preferences if they exist
+        travel_preferences = None
         if travel_preferences_str and travel_preferences_str.lower() != 'null':
-            travel_preferences = json.loads(travel_preferences_str)
-            print(f"📦 Parsed travel preferences: {travel_preferences}")
-            print(f"🚗 Travel mode selected: {travel_preferences.get('travelMode', 'auto')}")
-            
-            # Validate travel preferences format
-            if 'locations' in travel_preferences:
-                print(f"Found {len(travel_preferences['locations'])} travel locations")
-                for loc in travel_preferences['locations']:
-                    print(f"Location: {loc}")
+            try:
+                travel_preferences = json.loads(travel_preferences_str)
+                print(f"📦 Parsed travel preferences: {travel_preferences}")
+                
+                # Log school filter explicitly
+                school_filter = travel_preferences.get('schoolFilter', 'both')
+                print(f"🏫 School filter explicitly set to: {school_filter}")
+                
+                # Fix potentially malformed data
+                if 'amenityWeights' in travel_preferences:
+                    # Ensure all amenity weights are integers
+                    for key in travel_preferences['amenityWeights']:
+                        try:
+                            travel_preferences['amenityWeights'][key] = int(travel_preferences['amenityWeights'][key])
+                        except (ValueError, TypeError):
+                            print(f"⚠️ Warning: Invalid weight for {key}, using default")
+                            travel_preferences['amenityWeights'][key] = 15 if key == 'school' or key == 'hospital' else 10
+                
+                # Validate travel preferences format
+                if 'locations' in travel_preferences:
+                    print(f"Found {len(travel_preferences['locations'])} travel locations")
+                    for loc in travel_preferences['locations']:
+                        print(f"Location: {loc}")
+            except json.JSONDecodeError as e:
+                print(f"❌ Error decoding travel preferences: {e}")
+                print(f"Raw preferences string: {travel_preferences_str}")
+                travel_preferences = None
+            except Exception as e:
+                print(f"❌ Unexpected error parsing preferences: {str(e)}")
+                travel_preferences = None
         else:
-            travel_preferences = None
             print("No travel preferences provided or 'null' received")
         
         print("🔍 Starting location analysis...")
-        locations = analyze_location(city, travel_preferences)
-        print(f"✅ Analysis complete. Found {len(locations)} locations")
+        try:
+            locations = analyze_location(city, travel_preferences)
+            print(f"✅ Analysis complete. Found {len(locations)} locations")
+        except Exception as e:
+            import traceback
+            print(f"❌ Error in location analysis: {str(e)}")
+            print(f"Stack trace: {traceback.format_exc()}")
+            locations = []
         
         response_data = {
             "city": city,
@@ -731,14 +1186,11 @@ def get_amenities():
         
         print("📤 Sending response to client")
         return jsonify(response_data)
-    except json.JSONDecodeError as e:
-        print(f"❌ JSON Decode Error: {str(e)}")
-        return jsonify({"error": "Invalid travel preferences format"}), 400
     except Exception as e:
         print(f"❌ Server Error: {str(e)}")
         import traceback
         print(f"Stack trace: {traceback.format_exc()}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "locations": []}), 500
 
 @app.route('/bus-routes', methods=['GET'])
 def get_bus_routes():
@@ -952,6 +1404,157 @@ def transport_comparison():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/debug-schools', methods=['GET'])
+def debug_schools():
+    """Debug endpoint to list schools by filter type"""
+    try:
+        city = request.args.get('city', "Cardiff, UK")
+        school_filter = request.args.get('filter', 'both')  # 'primary', 'secondary', or 'both'
+        
+        print(f"🏫 Debugging schools for {city} with filter: {school_filter}")
+        
+        # Get city boundary
+        city_gdf = ox.geocode_to_gdf(city)
+        if city_gdf.empty:
+            return jsonify({"error": f"Could not retrieve boundary for {city}"}), 404
+
+        schools = []
+        primary_schools = []
+        secondary_schools = []
+        
+        # Get secondary schools if needed
+        if school_filter == 'secondary' or school_filter == 'both':
+            try:
+                # Try with ISCED tags first
+                secondary_query = {"amenity": "school", "isced:level": ["2", "3", "2;3"]}
+                secondary_schools_isced = ox.features_from_place(city, secondary_query, which_result=None)
+                
+                # Add these to our results
+                if not secondary_schools_isced.empty:
+                    for idx, row in secondary_schools_isced.iterrows():
+                        school_name = row.get("name", "Unnamed School")
+                        is_top = school_name in top_secondary_schools_dict
+                        secondary_schools.append({
+                            "name": school_name,
+                            "type": "secondary",
+                            "osm_id": row.get("osmid"),
+                            "is_top_rated": is_top,
+                            "rank": top_secondary_schools_dict.get(school_name, {}).get("rank") if is_top else None,
+                            "method": "isced_tag"
+                        })
+                
+                # Also try name-based identification
+                all_schools = ox.features_from_place(city, {"amenity": "school"})
+                if not all_schools.empty:
+                    name_filters = ["secondary", "high", "comprehensive", "academy", "college"]
+                    for idx, row in all_schools.iterrows():
+                        school_name = row.get("name", "Unnamed School")
+                        
+                        # Skip schools we already found
+                        if any(s["name"] == school_name for s in secondary_schools):
+                            continue
+                            
+                        # Check if it matches name keywords
+                        is_secondary = any(keyword in str(school_name).lower() for keyword in name_filters)
+                        is_top = school_name in top_secondary_schools_dict
+                        
+                        # Include if it matches keywords or is in our top list
+                        if is_secondary or is_top:
+                            secondary_schools.append({
+                                "name": school_name,
+                                "type": "secondary",
+                                "osm_id": row.get("osmid"),
+                                "is_top_rated": is_top,
+                                "rank": top_secondary_schools_dict.get(school_name, {}).get("rank") if is_top else None,
+                                "method": "name_keyword" if is_secondary else "top_list_match"
+                            })
+            except Exception as e:
+                return jsonify({"error": f"Error getting secondary schools: {str(e)}"}), 500
+        
+        # Get primary schools if needed
+        if school_filter == 'primary' or school_filter == 'both':
+            try:
+                # Try with ISCED tags first
+                primary_query = {"amenity": "school", "isced:level": ["0", "1", "0;1"]}
+                primary_schools_isced = ox.features_from_place(city, primary_query, which_result=None)
+                
+                # Add these to our results
+                if not primary_schools_isced.empty:
+                    for idx, row in primary_schools_isced.iterrows():
+                        school_name = row.get("name", "Unnamed School")
+                        is_top = school_name in top_primary_schools_dict
+                        primary_schools.append({
+                            "name": school_name,
+                            "type": "primary",
+                            "osm_id": row.get("osmid"),
+                            "is_top_rated": is_top,
+                            "rank": top_primary_schools_dict.get(school_name, {}).get("rank") if is_top else None,
+                            "method": "isced_tag"
+                        })
+                
+                # Also try name-based identification
+                all_schools = ox.features_from_place(city, {"amenity": "school"})
+                if not all_schools.empty:
+                    name_filters = ["primary", "junior", "infant", "elementary"]
+                    for idx, row in all_schools.iterrows():
+                        school_name = row.get("name", "Unnamed School")
+                        
+                        # Skip schools we already found
+                        if any(s["name"] == school_name for s in primary_schools):
+                            continue
+                            
+                        # Check if it matches name keywords
+                        is_primary = any(keyword in str(school_name).lower() for keyword in name_filters)
+                        is_top = school_name in top_primary_schools_dict
+                        
+                        # Include if it matches keywords or is in our top list
+                        if is_primary or is_top:
+                            primary_schools.append({
+                                "name": school_name,
+                                "type": "primary",
+                                "osm_id": row.get("osmid"),
+                                "is_top_rated": is_top,
+                                "rank": top_primary_schools_dict.get(school_name, {}).get("rank") if is_top else None,
+                                "method": "name_keyword" if is_primary else "top_list_match"
+                            })
+            except Exception as e:
+                return jsonify({"error": f"Error getting primary schools: {str(e)}"}), 500
+        
+        # Combine results according to filter
+        if school_filter == 'both':
+            schools = secondary_schools + primary_schools
+        elif school_filter == 'secondary':
+            schools = secondary_schools
+        else:  # primary
+            schools = primary_schools
+        
+        # Return detailed information
+        return jsonify({
+            "city": city,
+            "school_filter": school_filter,
+            "total_schools": len(schools),
+            "primary_count": len(primary_schools),
+            "secondary_count": len(secondary_schools),
+            "top_rated_count": sum(1 for s in schools if s.get("is_top_rated")),
+            "school_type_counts": {
+                "primary": len([s for s in schools if s.get("type") == "primary"]),
+                "secondary": len([s for s in schools if s.get("type") == "secondary"]),
+                "unknown": len([s for s in schools if s.get("type") == "unknown"])
+            },
+            "filter_status": "✅ Filter applied correctly - showing only requested school types" 
+                if (school_filter == 'secondary' and all(s.get("type") == "secondary" for s in schools)) or
+                   (school_filter == 'primary' and all(s.get("type") == "primary" for s in schools)) or
+                   school_filter == 'both' else
+                "❌ Filter might not be working correctly - check results",
+            "schools": schools
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)
