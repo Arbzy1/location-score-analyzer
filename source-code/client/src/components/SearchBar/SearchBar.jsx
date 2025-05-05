@@ -23,7 +23,7 @@ function SearchBar({ onSearchResults, onSearchStart }) {
       onSearchStart(query);
     }
     
-    const apiUrl = `/api/amenities`;
+    const apiUrl = `${API_URL}/amenities`;
     console.log("🌐 Making API request to:", apiUrl, "with query:", query);
     
     try {

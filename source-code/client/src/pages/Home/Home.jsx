@@ -148,7 +148,7 @@ function Home() {
 
     try {
       console.log('Geocoding postcode:', postcode);
-      const response = await fetch(`${API_URL}/api/postcode/${encodeURIComponent(postcode)}`);
+      const response = await fetch(`${API_URL}/postcode/${encodeURIComponent(postcode)}`);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -224,7 +224,7 @@ function Home() {
     setHasSearched(true);
 
     try {
-      const url = `/api/amenities`;
+      const url = `${API_URL}/amenities`;
       const params = {
         city: selectedCity,
         travel_preferences: JSON.stringify(travelPreferences),

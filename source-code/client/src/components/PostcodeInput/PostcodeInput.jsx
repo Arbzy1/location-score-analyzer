@@ -44,7 +44,7 @@ function PostcodeInput({
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/postcode/${encodeURIComponent(postcode)}`);
+      const response = await fetch(`${API_URL}/postcode/${encodeURIComponent(postcode)}`);
       
       if (!response.ok) {
         const errorText = await response.text();

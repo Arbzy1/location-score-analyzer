@@ -1,6 +1,8 @@
+import { API_URL } from '../utils/api';
+
 export const getPostcodeAmenities = async (postcode) => {
   try {
-    const response = await fetch(`/api/postcode/${encodeURIComponent(postcode)}/amenities`);
+    const response = await fetch(`${API_URL}/postcode/${encodeURIComponent(postcode)}/amenities`);
     
     if (!response.ok) {
       const errorText = await response.text();
