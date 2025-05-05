@@ -51,7 +51,8 @@ except Exception as e:
     print(f"❌ Error loading top schools data: {str(e)}")
 
 app = Flask(__name__)
-CORS(app)
+# Configure CORS to allow everything - maximum permissiveness
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": "*", "expose_headers": "*", "methods": "*", "supports_credentials": True}})
 
 print("Server: Starting up Flask application...")
 ox.settings.use_cache = False
@@ -61,7 +62,7 @@ ox.settings.log_console = True
 gtfs_service = GTFSService()
 
 # OpenTripPlanner API URL
-OTP_API_URL = "http://localhost:8080/otp/routers/default/index/graphql"
+OTP_API_URL = "https://82.10.48.243:8080/otp/routers/default/index/graphql"
 
 @lru_cache(maxsize=128)
 def otp_fastest_minutes(origin, destination, dt_iso="2025-05-01T08:00:00+01:00"):
@@ -139,35 +140,21 @@ def otp_fastest_minutes(origin, destination, dt_iso="2025-05-01T08:00:00+01:00")
 
 @app.after_request
 def after_request(response):
+    # Allow all origins
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    # Allow all headers
+    response.headers.add('Access-Control-Allow-Headers', '*')
+    # Allow all methods
+    response.headers.add('Access-Control-Allow-Methods', '*')
+    # Allow credentials
     response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('X-Frame-Options', 'SAMEORIGIN')
     
-    # Add Content-Security-Policy header to allow Firebase and other necessary services
-    csp = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-        "https://www.googletagmanager.com https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com; "
-        "img-src 'self' data: https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com; "
-        "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com https://use.typekit.net; "
-        "connect-src 'self' https://tranquilty-backend-core.onrender.com https://*.onrender.com "
-        "http://localhost:5000 http://localhost:8080 "
-        "https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com "
-        "https://identitytoolkit.googleapis.com https://firestore.googleapis.com "
-        "https://api.mapbox.com https://events.mapbox.com "
-        "https://api.postcodes.io http://192.168.1.162:8080 https://www.google-analytics.com; "
-        "frame-src 'self' https://api.mapbox.com https://*.firebaseio.com https://*.googleapis.com; "
-        "worker-src 'self' blob:; "
-        "manifest-src 'self'; "
-        "object-src 'none'; "
-        "base-uri 'self'; "
-        "form-action 'self'; "
-        "frame-ancestors 'self';"
-    )
-    response.headers.add('Content-Security-Policy', csp)
+    # Remove security headers that might block cross-origin requests
+    response.headers.pop('X-Frame-Options', None)
+    
+    # Remove Content-Security-Policy entirely
+    response.headers.pop('Content-Security-Policy', None)
+    
     return response
 
 def get_nearest_amenity(pt, gdf):
@@ -1001,7 +988,7 @@ def ors_minutes(origin, destination, profile):
         start_point = f"{origin[1]},{origin[0]}"
         end_point = f"{destination[1]},{destination[0]}"
         
-        url = f"http://192.168.1.162:8080/ors/v2/directions/{profile}?start={start_point}&end={end_point}"
+        url = f"https://82.10.48.243:6969/ors/v2/directions/{profile}?start={start_point}&end={end_point}"
         response = requests.get(url)
         data = response.json()
         

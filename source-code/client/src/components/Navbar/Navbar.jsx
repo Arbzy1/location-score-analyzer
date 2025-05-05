@@ -36,14 +36,14 @@ function Navbar() {
         <div className="navbar-auth">
           {currentUser ? (
             <div className="user-profile">
-              <img 
+              {/* <img 
                 src={currentUser.photoURL || 'https://ui-avatars.com/api/?name=' + currentUser.email?.charAt(0)}
                 alt="Profile" 
                 className="user-avatar"
                 onError={(e) => {
                   e.target.src = 'https://ui-avatars.com/api/?name=' + currentUser.email?.charAt(0);
                 }}
-              />
+              /> */}
               <div className="user-info">
                 <span className="user-email">{currentUser.email}</span>
                 <button onClick={handleLogout} className="auth-button logout">

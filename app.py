@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+# Configure CORS to allow everything
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": "*", "expose_headers": "*", "methods": "*", "supports_credentials": True}})
 
 @app.route('/api/postcode/<postcode>')
 def get_postcode_info(postcode):
@@ -59,7 +60,17 @@ def get_postcode_amenities(postcode):
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
-# No need for security headers as they're handled by Vite
+# Add a new route to add unrestricted CORS headers
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', '*')
+    response.headers.add('Access-Control-Allow-Methods', '*')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    # Remove any security headers that might restrict access
+    response.headers.pop('X-Frame-Options', None)
+    response.headers.pop('Content-Security-Policy', None)
+    return response
 
 if __name__ == '__main__':
     # Get port from environment variable for Render compatibility
