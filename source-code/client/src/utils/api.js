@@ -1,8 +1,8 @@
 // API configuration
 const isDevelopment = import.meta.env.MODE === 'development';
 
-// Using the public IP address for the backend with HTTP instead of HTTPS
-const LOCAL_API_URL = 'http://82.10.48.243:5000';
+// Using the public IP address for the backend with HTTPS
+const LOCAL_API_URL = 'https://82.10.48.243:5000';
 
 // This is your deployed backend URL, kept for reference
 const REMOTE_API_URL = 'https://tranquilty-backend-core.onrender.com';
