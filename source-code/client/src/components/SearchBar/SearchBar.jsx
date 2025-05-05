@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import axios from "axios";
+import { API_URL } from '../../utils/api';
 import "./SearchBar.css";
 
 function SearchBar({ onSearchResults, onSearchStart }) {
@@ -128,7 +129,7 @@ function SearchBar({ onSearchResults, onSearchStart }) {
         <div className="search-error">
           <p>{error}</p>
           <p className="error-help">
-            Make sure the server is running and accessible at {import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}
+            Make sure the server is running and accessible at {API_URL}
           </p>
         </div>
       )}

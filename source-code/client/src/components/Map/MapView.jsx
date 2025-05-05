@@ -4,6 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapView.css';
 import { getDirections } from '../../services/osrmService';
 import { getPostcodeAmenities } from '../../services/amenityService';
+import { API_URL } from '../../utils/api';
 
 // Set Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -626,7 +627,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
   // Function to fetch bus routes from backend
   const fetchBusRoutes = async (city) => {
     try {
-      const response = await fetch(`http://localhost:5000/bus-routes?city=${encodeURIComponent(city)}`);
+      const response = await fetch(`${API_URL}/bus-routes?city=${encodeURIComponent(city)}`);
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }

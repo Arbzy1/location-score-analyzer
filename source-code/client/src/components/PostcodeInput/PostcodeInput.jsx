@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_URL } from '../../utils/api';
 import './PostcodeInput.css';
 
 function PostcodeInput({ 
@@ -43,7 +44,7 @@ function PostcodeInput({
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/postcode/${encodeURIComponent(postcode)}`);
+      const response = await fetch(`${API_URL}/api/postcode/${encodeURIComponent(postcode)}`);
       
       if (!response.ok) {
         const errorText = await response.text();

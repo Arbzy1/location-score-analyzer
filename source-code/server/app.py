@@ -1612,4 +1612,7 @@ def debug_schools():
         }), 500
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    # Get port from environment variable for Render compatibility
+    port = int(os.environ.get('PORT', 5000))
+    # Use 0.0.0.0 to bind to all interfaces for Render compatibility
+    app.run(debug=True, host='0.0.0.0', port=port)

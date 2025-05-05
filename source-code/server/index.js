@@ -24,4 +24,13 @@ app.get('/api/proxy/postcodes/:postcode', async (req, res) => {
   }
 });
 
-// ... existing code ... 
+// Add health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
+// Use port from environment variable for Render compatibility
+const port = process.env.PORT || 5000;
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port}`);
+}); 

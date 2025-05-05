@@ -5,6 +5,7 @@ import './Home.css';
 import { MapView } from '../../components/Map/MapView';
 import { TravelBehaviourForm } from '../../components/TravelBehaviourForm/TravelBehaviourForm';
 import { auth, db } from "../../firebase";
+import { API_URL } from '../../utils/api';
 import { 
   doc, 
   setDoc, 
@@ -147,7 +148,7 @@ function Home() {
 
     try {
       console.log('Geocoding postcode:', postcode);
-      const response = await fetch(`http://localhost:5000/api/postcode/${encodeURIComponent(postcode)}`);
+      const response = await fetch(`${API_URL}/api/postcode/${encodeURIComponent(postcode)}`);
       
       if (!response.ok) {
         const errorText = await response.text();

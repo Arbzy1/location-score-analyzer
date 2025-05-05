@@ -54,7 +54,15 @@ def get_postcode_amenities(postcode):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Add a health check endpoint for Render
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy"}), 200
+
 # No need for security headers as they're handled by Vite
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000) 
+    # Get port from environment variable for Render compatibility
+    port = int(os.environ.get('PORT', 5000))
+    # Use 0.0.0.0 to bind to all interfaces
+    app.run(debug=True, host='0.0.0.0', port=port) 
