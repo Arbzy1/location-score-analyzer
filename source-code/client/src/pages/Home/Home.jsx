@@ -235,7 +235,7 @@ function Home() {
       
       const response = await axios.get(url, {
         params: params,
-        timeout: 30000,
+        timeout: 60000,  // Increase timeout to 60 seconds
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
@@ -267,10 +267,19 @@ function Home() {
       console.error("❌ Error during search:", err);
       console.error("Error details:", {
         message: err.message,
-        response: err.response,
-        request: err.request
+        response: err.response?.data || "No response data",
+        request: err.request || "No request data",
+        status: err.response?.status || "No status code"
       });
-      setError(err.response?.data?.message || "An error occurred during search");
+      
+      // Check if the error is related to OpenTripPlanner (likely bus transit issues)
+      if (err.message?.includes('timeout') || 
+          (err.response?.data && JSON.stringify(err.response.data).includes('OTP'))) {
+        setError("Transit data service is currently unavailable. Try again or choose a different transport mode.");
+      } else {
+        setError(err.response?.data?.message || err.message || "An error occurred during search");
+      }
+      
       setSearchResults([]);
     } finally {
       setIsLoading(false);

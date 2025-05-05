@@ -488,4 +488,23 @@
   .school-filter-options {
     flex-direction: column;
   }
+}
+
+/* Add styling for bus transit warning */
+.bus-transit-warning {
+  margin: 10px 0;
+  padding: 10px 15px;
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 4px;
+  color: #856404;
+}
+
+.bus-transit-warning p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.bus-transit-warning strong {
+  font-weight: 600;
 } 

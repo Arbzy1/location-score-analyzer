@@ -160,6 +160,16 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
           {showTravelModeTips ? 'Hide Travel Mode Tips' : 'Show Travel Mode Tips'}
         </button>
         
+        {/* Warning for bus transit mode */}
+        {travelMode === 'bus' && (
+          <div className="bus-transit-warning">
+            <p>
+              <strong>⚠️ Note:</strong> Bus transit requires the OpenTripPlanner service to be running. 
+              If you experience errors, please try selecting a different travel mode.
+            </p>
+          </div>
+        )}
+        
         {showTravelModeTips && (
           <div className="travel-mode-tips">
             <h4>About Travel Modes</h4>

@@ -100,12 +100,26 @@ def otp_fastest_minutes(origin, destination, dt_iso="2025-05-01T08:00:00+01:00")
         
         # Bail out cleanly if GraphQL reports errors
         if "errors" in r:
-            print("OTP GraphQL error:", r["errors"][0]["message"])
+            error_msg = r["errors"][0]["message"] if r["errors"] and len(r["errors"]) > 0 and "message" in r["errors"][0] else "Unknown GraphQL error"
+            print(f"OTP GraphQL error: {error_msg}")
+            return None
+
+        # Check if we got valid data
+        if "data" not in r:
+            print("OTP response missing data property")
             return None
 
         plan = r.get("data", {}).get("plan")
-        if not plan or not plan.get("itineraries"):
+        if not plan:
+            print("OTP response missing plan property")
+            return None
+            
+        if not plan.get("itineraries") or len(plan["itineraries"]) == 0:
             print("OTP found no transit itinerary")
+            return None
+
+        if not plan["itineraries"][0].get("duration"):
+            print("OTP itinerary missing duration")
             return None
 
         sec = plan["itineraries"][0]["duration"]
@@ -113,8 +127,14 @@ def otp_fastest_minutes(origin, destination, dt_iso="2025-05-01T08:00:00+01:00")
         print(f"OTP found transit route: {transit_min:.2f} minutes")
         return transit_min
         
+    except requests.exceptions.Timeout:
+        print("OTP request timed out after 15 seconds")
+        return None
+    except requests.exceptions.ConnectionError:
+        print("OTP connection error - server may be down")
+        return None
     except Exception as e:
-        print("OTP parsing error:", e)
+        print(f"OTP parsing error: {str(e)}")
         return None
 
 @app.after_request
@@ -1133,6 +1153,20 @@ def get_amenities():
     print(f"🔄 Raw travel preferences received: '{travel_preferences_str}'")
     
     try:
+        # Check if OTP is available for bus transit
+        otp_available = True
+        try:
+            # Simple OTP health check
+            if travel_preferences_str and "bus" in travel_preferences_str:
+                print("🚌 Bus mode detected, checking OTP availability...")
+                otp_status = requests.get("http://localhost:8080/otp", timeout=2)
+                if otp_status.status_code != 200:
+                    otp_available = False
+                    print(f"⚠️ OTP server returned status code: {otp_status.status_code}")
+        except requests.exceptions.RequestException:
+            otp_available = False
+            print("⚠️ OTP server is not available")
+
         # Parse travel preferences if they exist
         travel_preferences = None
         if travel_preferences_str and travel_preferences_str.lower() != 'null':
@@ -1159,6 +1193,14 @@ def get_amenities():
                     print(f"Found {len(travel_preferences['locations'])} travel locations")
                     for loc in travel_preferences['locations']:
                         print(f"Location: {loc}")
+                
+                # Check if bus mode is requested but OTP is unavailable
+                if travel_preferences.get('travelMode') == 'bus' and not otp_available:
+                    return jsonify({
+                        "error": "Bus transit mode requested but OpenTripPlanner service is unavailable. Please try a different travel mode.",
+                        "otp_status": "unavailable",
+                        "locations": []
+                    }), 503
             except json.JSONDecodeError as e:
                 print(f"❌ Error decoding travel preferences: {e}")
                 print(f"Raw preferences string: {travel_preferences_str}")
@@ -1177,12 +1219,25 @@ def get_amenities():
             import traceback
             print(f"❌ Error in location analysis: {str(e)}")
             print(f"Stack trace: {traceback.format_exc()}")
+            
+            # Check if the error is related to OpenTripPlanner
+            error_str = str(e).lower()
+            if "otp" in error_str or "opentripplanner" in error_str or "bus" in error_str or "transit" in error_str:
+                return jsonify({
+                    "error": "Error processing transit data. The OpenTripPlanner service may be unavailable.",
+                    "details": str(e),
+                    "locations": []
+                }), 500
+            
             locations = []
         
         response_data = {
             "city": city,
             "locations": locations
         }
+        
+        if not otp_available:
+            response_data["warning"] = "OpenTripPlanner is unavailable. Bus transit estimates may not be accurate."
         
         print("📤 Sending response to client")
         return jsonify(response_data)
