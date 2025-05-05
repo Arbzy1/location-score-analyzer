@@ -62,7 +62,7 @@ ox.settings.log_console = True
 gtfs_service = GTFSService()
 
 # OpenTripPlanner API URL
-OTP_API_URL = "https://82.10.48.243:8080/otp/routers/default/index/graphql"
+OTP_API_URL = "http://localhost:8080/otp/routers/default/index/graphql"
 
 @lru_cache(maxsize=128)
 def otp_fastest_minutes(origin, destination, dt_iso="2025-05-01T08:00:00+01:00"):
@@ -988,7 +988,7 @@ def ors_minutes(origin, destination, profile):
         start_point = f"{origin[1]},{origin[0]}"
         end_point = f"{destination[1]},{destination[0]}"
         
-        url = f"https://82.10.48.243:6969/ors/v2/directions/{profile}?start={start_point}&end={end_point}"
+        url = f"http://192.168.1.162:8080/ors/v2/directions/{profile}?start={start_point}&end={end_point}"
         response = requests.get(url)
         data = response.json()
         
