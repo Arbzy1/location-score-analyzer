@@ -1,0 +1,38 @@
+{
+  "status": "available",
+  "server_info": {
+    "version": "2.2.0",
+    "build_date": "2025-02-15",
+    "uptime_hours": 120,
+    "server_time": "2025-05-13T12:30:45Z"
+  },
+  "data_sources": {
+    "gtfs": {
+      "last_updated": "2025-05-01",
+      "valid_until": "2025-08-31",
+      "agencies": [
+        "Cardiff Bus",
+        "Transport for Wales Rail",
+        "National Express"
+      ]
+    },
+    "osm": {
+      "last_updated": "2025-04-22"
+    }
+  },
+  "active_routers": [
+    {
+      "id": "wales",
+      "status": "RUNNING"
+    },
+    {
+      "id": "uk",
+      "status": "RUNNING"
+    }
+  ],
+  "api_call_limits": {
+    "max_per_minute": 60,
+    "max_per_day": 10000,
+    "remaining_today": 9500
+  }
+} 

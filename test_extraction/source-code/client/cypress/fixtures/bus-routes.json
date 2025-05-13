@@ -1,0 +1,111 @@
+{
+  "routes": [
+    {
+      "id": "1",
+      "name": "Bay Circle",
+      "operator": "Cardiff Bus",
+      "frequency_minutes": 10,
+      "start_point": "City Centre",
+      "end_point": "Cardiff Bay",
+      "key_stops": ["Central Station", "Lloyd George Avenue", "Mermaid Quay"],
+      "weekend_service": true,
+      "accessibility": true,
+      "night_service": false
+    },
+    {
+      "id": "2",
+      "name": "Cathedral Road - City",
+      "operator": "Cardiff Bus",
+      "frequency_minutes": 15,
+      "start_point": "Cathedral Road",
+      "end_point": "City Centre",
+      "key_stops": ["Pontcanna", "Sophia Gardens", "Westgate Street"],
+      "weekend_service": true,
+      "accessibility": true,
+      "night_service": false
+    },
+    {
+      "id": "8",
+      "name": "Heath Hospital - Bay",
+      "operator": "Cardiff Bus",
+      "frequency_minutes": 12,
+      "start_point": "Heath Hospital",
+      "end_point": "Cardiff Bay",
+      "key_stops": ["Albany Road", "Queen Street", "Central Station", "Mermaid Quay"],
+      "weekend_service": true,
+      "accessibility": true,
+      "night_service": false
+    },
+    {
+      "id": "9",
+      "name": "City Centre - Channel View",
+      "operator": "Cardiff Bus",
+      "frequency_minutes": 20,
+      "start_point": "City Centre",
+      "end_point": "Channel View",
+      "key_stops": ["Central Station", "Grangetown", "Ferry Road"],
+      "weekend_service": true,
+      "accessibility": true,
+      "night_service": false
+    },
+    {
+      "id": "25",
+      "name": "City - Cathays",
+      "operator": "Cardiff Bus",
+      "frequency_minutes": 8,
+      "start_point": "City Centre",
+      "end_point": "Cathays",
+      "key_stops": ["Queen Street", "Cathays Station", "University"],
+      "weekend_service": true,
+      "accessibility": true,
+      "night_service": true
+    }
+  ],
+  "stops": [
+    {
+      "id": "CCMS1",
+      "name": "Central Station",
+      "lat": 51.476,
+      "lon": -3.179,
+      "routes": ["1", "8", "9"],
+      "shelter": true,
+      "real_time_info": true
+    },
+    {
+      "id": "CCQS1",
+      "name": "Queen Street",
+      "lat": 51.481,
+      "lon": -3.173,
+      "routes": ["8", "25"],
+      "shelter": true,
+      "real_time_info": true
+    },
+    {
+      "id": "CCBB1",
+      "name": "Mermaid Quay",
+      "lat": 51.463,
+      "lon": -3.165,
+      "routes": ["1", "8"],
+      "shelter": true,
+      "real_time_info": true
+    },
+    {
+      "id": "CCGT1",
+      "name": "Grangetown Station",
+      "lat": 51.471,
+      "lon": -3.184,
+      "routes": ["9"],
+      "shelter": true,
+      "real_time_info": false
+    },
+    {
+      "id": "CCCA1",
+      "name": "Cathays Station",
+      "lat": 51.489,
+      "lon": -3.181,
+      "routes": ["25"],
+      "shelter": true,
+      "real_time_info": true
+    }
+  ]
+} 

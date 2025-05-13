@@ -1,0 +1,47 @@
+{
+  "travel_modes": {
+    "transit": {
+      "duration_minutes": 22,
+      "routes": ["1", "8"],
+      "transfers": 1,
+      "walking_distance": 450,
+      "fare": 2.80,
+      "co2_emissions": 85,
+      "peak_frequency": "Every 7-10 minutes"
+    },
+    "driving": {
+      "duration_minutes": 15,
+      "distance_km": 5.2,
+      "fuel_cost": 1.85,
+      "co2_emissions": 550,
+      "peak_traffic_factor": 1.4,
+      "parking_available": true
+    },
+    "cycling": {
+      "duration_minutes": 18,
+      "distance_km": 4.8,
+      "calories": 142,
+      "co2_emissions": 0,
+      "elevation_gain": 38,
+      "cycle_lanes_percent": 65
+    },
+    "walking": {
+      "duration_minutes": 45,
+      "distance_km": 3.9,
+      "calories": 220,
+      "co2_emissions": 0,
+      "elevation_gain": 42
+    }
+  },
+  "from": {
+    "lat": 51.481,
+    "lon": -3.179,
+    "address": "Cardiff Bay, Cardiff"
+  },
+  "to": {
+    "lat": 51.465,
+    "lon": -3.165,
+    "address": "City Centre, Cardiff"
+  },
+  "timestamp": "2025-05-13T08:30:00Z"
+} 

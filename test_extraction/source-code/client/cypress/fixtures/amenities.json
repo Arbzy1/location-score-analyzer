@@ -1,0 +1,110 @@
+{
+  "city": "Cardiff, UK",
+  "locations": [
+    {
+      "id": "loc1",
+      "lat": 51.481,
+      "lon": -3.179,
+      "score": 85,
+      "area_name": "Cardiff Bay",
+      "amenities": {
+        "schools": [
+          { "name": "Cardiff Bay Primary", "distance": 450, "type": "primary" }
+        ],
+        "supermarkets": [
+          { "name": "Tesco Express", "distance": 350 },
+          { "name": "Aldi", "distance": 850 }
+        ],
+        "healthcare": [
+          { "name": "Cardiff Bay Medical Centre", "distance": 650 }
+        ],
+        "parks": [
+          { "name": "Hamadryad Park", "distance": 300 }
+        ],
+        "transport": {
+          "bus_stops": 5,
+          "nearest_stop": 180,
+          "routes": ["1", "2", "8"]
+        }
+      },
+      "travel": {
+        "work": {
+          "transit": 22,
+          "driving": 15,
+          "cycling": 18,
+          "walking": 45
+        }
+      }
+    },
+    {
+      "id": "loc2",
+      "lat": 51.465,
+      "lon": -3.165,
+      "score": 78,
+      "area_name": "Grangetown",
+      "amenities": {
+        "schools": [
+          { "name": "Grangetown Primary", "distance": 350, "type": "primary" },
+          { "name": "St Patrick's", "distance": 750, "type": "primary" }
+        ],
+        "supermarkets": [
+          { "name": "Lidl", "distance": 400 }
+        ],
+        "healthcare": [
+          { "name": "Grangetown Surgery", "distance": 550 }
+        ],
+        "parks": [
+          { "name": "Grange Gardens", "distance": 250 }
+        ],
+        "transport": {
+          "bus_stops": 4,
+          "nearest_stop": 220,
+          "routes": ["1", "9", "95"]
+        }
+      },
+      "travel": {
+        "work": {
+          "transit": 18,
+          "driving": 12,
+          "cycling": 13,
+          "walking": 35
+        }
+      }
+    },
+    {
+      "id": "loc3",
+      "lat": 51.495,
+      "lon": -3.177,
+      "score": 92,
+      "area_name": "Cathays",
+      "amenities": {
+        "schools": [
+          { "name": "Cathays High School", "distance": 350, "type": "secondary" }
+        ],
+        "supermarkets": [
+          { "name": "Tesco", "distance": 250 },
+          { "name": "Sainsbury's Local", "distance": 450 }
+        ],
+        "healthcare": [
+          { "name": "University Hospital", "distance": 850 }
+        ],
+        "parks": [
+          { "name": "Bute Park", "distance": 500 }
+        ],
+        "transport": {
+          "bus_stops": 7,
+          "nearest_stop": 120,
+          "routes": ["2", "25", "35", "52"]
+        }
+      },
+      "travel": {
+        "work": {
+          "transit": 15,
+          "driving": 10,
+          "cycling": 12,
+          "walking": 30
+        }
+      }
+    }
+  ]
+} 
