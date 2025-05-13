@@ -224,12 +224,28 @@ function Home() {
     setHasSearched(true);
 
     try {
+      // First, test the connection to make sure proxy is working
+      try {
+        console.log("🧪 Testing connection to backend...");
+        const testResponse = await axios.get(`${API_URL}/otp-status`, { timeout: 5000 });
+        console.log("✅ Connection test successful:", testResponse.data);
+      } catch (testError) {
+        console.error("❌ Connection test failed:", testError);
+        // Continue with the search anyway
+      }
+
       const url = `${API_URL}/amenities`;
+      
+      // Fix travel_preferences parameter to ensure it's not sent as 'null' string
       const params = {
         city: selectedCity,
-        travel_preferences: JSON.stringify(travelPreferences),
         _t: Date.now() // Add timestamp to prevent caching
       };
+
+      // Only add travel_preferences if they exist
+      if (travelPreferences) {
+        params.travel_preferences = JSON.stringify(travelPreferences);
+      }
       
       console.log("🌐 Making request to:", url);
       console.log("📦 Request params:", params);

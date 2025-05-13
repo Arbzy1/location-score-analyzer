@@ -62,7 +62,7 @@ ox.settings.log_console = True
 gtfs_service = GTFSService()
 
 # OpenTripPlanner API URL
-OTP_API_URL = "http://localhost:8080/otp/routers/default/index/graphql"
+OTP_API_URL = "http://192.168.1.161:8080/otp/routers/default/index/graphql"
 
 @lru_cache(maxsize=128)
 def otp_fastest_minutes(origin, destination, dt_iso="2025-05-01T08:00:00+01:00"):
