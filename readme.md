@@ -1,5 +1,8 @@
 # Location Score Analyzer
 
+DEMO:
+https://youtu.be/dQODno6YMW4
+
 ![Location Score Analyzer](source-code/client/public/android-chrome-192x192.png)
 
 A sophisticated web application that analyzes and scores residential locations based on travel times, amenities, and public transport accessibility. The system helps users find their ideal neighborhood by calculating comprehensive scores for different areas based on personalized travel preferences.
@@ -121,14 +124,13 @@ For bus transit, the system uses OpenTripPlanner to calculate journey times. If 
 - React
 - Firebase Authentication
 - CSS
-- Leaflet Maps
 
 ### Backend
 - Python
 - Flask
-- OSRM (OpenStreetMap Routing Service)
+- ORS (Open Route Service)
 - OpenTripPlanner (for public transit)
-- GTFS Data (General Transit Feed Specification)
+- Cardiff GTFS Data (General Transit Feed Specification)
 
 ## 📝 Documentation
 
@@ -150,7 +152,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- Your Name - Initial work - [YourGitHub](https://github.com/yourusername)
+- Aden Butt
 
 ## 🙏 Acknowledgments
 
@@ -160,14 +162,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Firebase for authentication
 - All contributors and supporters
 
-## 📞 Contact
-
-For support or inquiries, please contact:
-- Email: support@locationscorer.com
-- Website: https://locationscorer.com
 
 ---
 
 <div align="center">
-  <sub>Built with ❤️ by Your Name</sub>
+  <sub></sub>
 </div>
