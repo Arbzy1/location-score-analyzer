@@ -1,30 +1,17 @@
-// Import required Firebase modules
+// Firebase is used for Google sign-in only; user data is stored in Neon via the API.
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth, GoogleAuthProvider } from "firebase/auth"; // ✅ Import GoogleAuthProvider
-import { getStorage } from "firebase/storage";
-import { getAnalytics } from "firebase/analytics";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
-// Firebase configuration (Replace with YOUR actual config)
+// Web config is public by design; override with VITE_FIREBASE_* env vars if needed.
 const firebaseConfig = {
-  apiKey: "AIzaSyDzWaATU0_Mq2hseLumEHrrpcW750RqDTk",
-  authDomain: "streetnetworkanalysis.firebaseapp.com",
-  projectId: "streetnetworkanalysis",
-  storageBucket: "streetnetworkanalysis.appspot.com",
-  messagingSenderId: "424449003734",
-  appId: "1:424449003734:web:752c75d45090bede57f977",
-  measurementId: "G-KBSSF2DYD2"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDzWaATU0_Mq2hseLumEHrrpcW750RqDTk",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "streetnetworkanalysis.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "streetnetworkanalysis",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:424449003734:web:752c75d45090bede57f977"
 };
 
-// Initialize Firebase app
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-// Firebase services
-const db = getFirestore(app);       // Firestore database
-const auth = getAuth(app);          // Firebase Authentication
-const provider = new GoogleAuthProvider(); // ✅ Added Google Sign-in Provider
-const storage = getStorage(app);    // Firebase Storage
-const analytics = getAnalytics(app); // Firebase Analytics
-
-// ✅ Export everything
-export { app, db, auth, provider, storage, analytics };
+export { app, auth, provider };

@@ -7,6 +7,10 @@ https://youtu.be/dQODno6YMW4
 
 A sophisticated web application that analyzes and scores residential locations based on travel times, amenities, and public transport accessibility. The system helps users find their ideal neighborhood by calculating comprehensive scores for different areas based on personalized travel preferences.
 
+> **Cloud version:** the app now runs on Cloudflare Workers + Neon with no self-hosted
+> services — see [DEPLOYMENT.md](DEPLOYMENT.md). The Flask server in `source-code/server`
+> is the original BSc implementation, kept for reference.
+
 ## 🌟 Features
 
 - **Multi-Modal Transport Analysis**
