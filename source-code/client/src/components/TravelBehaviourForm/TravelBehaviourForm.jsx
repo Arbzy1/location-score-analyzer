@@ -164,8 +164,9 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
         {travelMode === 'bus' && (
           <div className="bus-transit-warning">
             <p>
-              <strong>⚠️ Note:</strong> Bus transit requires the OpenTripPlanner service to be running. 
-              If you experience errors, please try selecting a different travel mode.
+              <strong>Note:</strong> Bus times use the Cardiff Bus timetable for a typical weekday
+              morning, including the walk to the stop and the average wait. Where no bus journey
+              exists, walking, cycling or driving is used instead.
             </p>
           </div>
         )}
