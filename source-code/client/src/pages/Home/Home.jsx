@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Home.css';
@@ -28,7 +28,6 @@ function Home() {
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [targetPostcode, setTargetPostcode] = useState(null);
   const { currentUser } = useAuth();
   const [savedPostcodes, setSavedPostcodes] = useState([]);
   const [travelPreferences, setTravelPreferences] = useState(null);
@@ -818,7 +817,7 @@ function Home() {
                           <div className="transparency-details">
                             <div className="transparency-intro">
                               <p>We believe in complete transparency about how our recommendations are generated. 
-                              This section reveals all the data and calculations used to determine this location's score.</p>
+                              This section reveals all the data and calculations used to determine this location&apos;s score.</p>
                             </div>
                             
                             <div className="raw-data-section">

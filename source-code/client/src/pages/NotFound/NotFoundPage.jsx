@@ -8,7 +8,7 @@ function NotFoundPage() {
         <h1 className="not-found-title">404</h1>
         <h2 className="not-found-subtitle">Page Not Found</h2>
         <p className="not-found-message">
-          The page you are looking for doesn't exist or has been moved.
+          The page you are looking for doesn&apos;t exist or has been moved.
         </p>
         <Link to="/" className="back-home-button">
           Back to Home

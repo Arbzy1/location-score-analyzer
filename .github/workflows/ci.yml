@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Lint, typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            source-code/client/package-lock.json
+            source-code/worker/package-lock.json
+
+      - name: Install client
+        working-directory: source-code/client
+        run: npm ci
+
+      - name: Lint client
+        working-directory: source-code/client
+        run: npm run lint
+
+      - name: Build client
+        working-directory: source-code/client
+        run: npm run build
+
+      - name: Install worker
+        working-directory: source-code/worker
+        run: npm ci
+
+      - name: Typecheck worker
+        working-directory: source-code/worker
+        run: npm run typecheck
+
+      - name: Check bus data matches the GTFS feed
+        working-directory: source-code/worker
+        run: |
+          npm run build:transit
+          git diff --exit-code -- src/data ../client/public/data
+
+      - name: Bundle worker (dry run)
+        working-directory: source-code/worker
+        run: npx wrangler deploy --dry-run --outdir dist

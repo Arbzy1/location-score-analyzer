@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import './TravelBehaviourForm.css';
 
 export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
@@ -175,7 +175,7 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
           <div className="travel-mode-tips">
             <h4>About Travel Modes</h4>
             <ul>
-              <li><strong>Auto-select:</strong> We'll calculate routes for all modes and choose the fastest one</li>
+              <li><strong>Auto-select:</strong> We&apos;ll calculate routes for all modes and choose the fastest one</li>
               <li><strong>Driving:</strong> Only consider car routes (good if you always drive)</li>
               <li><strong>Cycling:</strong> Only consider bike routes (good if you prefer cycling)</li>
               <li><strong>Walking:</strong> Only consider walking routes (good for short distances)</li>
@@ -290,7 +290,7 @@ export const TravelBehaviourForm = ({ onSubmit, savedPreferences }) => {
             <ul>
               <li>Higher weights mean the amenity has more impact on the final score</li>
               <li>Total weight should be 40% (the remaining 60% is split between transit and travel time)</li>
-              <li>Set weights to 0 for amenities you don't care about</li>
+              <li>Set weights to 0 for amenities you don&apos;t care about</li>
               <li>Adjust weights based on your lifestyle and priorities</li>
             </ul>
           </div>

@@ -1,4 +1,3 @@
-import React from 'react';
 import './TermsOfService.css';
 
 function TermsOfService() {
@@ -18,7 +17,7 @@ function TermsOfService() {
         <p>
           LocationScorer is a location analysis tool that provides scoring and insights for residential locations based on
           various factors including travel times, amenities, and public transport accessibility. Our service is provided
-          "as is" and "as available" without any warranties of any kind.
+          &quot;as is&quot; and &quot;as available&quot; without any warranties of any kind.
         </p>
 
         <h2>3. User Responsibilities</h2>
@@ -47,7 +46,7 @@ function TermsOfService() {
 
         <h2>6. Disclaimer of Warranties</h2>
         <p>
-          LocationScorer provides its service on an "as is" and "as available" basis. We make no representations or
+          LocationScorer provides its service on an &quot;as is&quot; and &quot;as available&quot; basis. We make no representations or
           warranties of any kind, express or implied, as to the operation of our service or the information,
           content, or materials included.
         </p>
