@@ -103,7 +103,9 @@ Two calculations were also corrected:
 - Amenity distances are now true distances. The original measured them on a flat map projection, which made them about 1.6× too long at Cardiff's latitude.
 - The travel score uses total weekly travel time, which is what the in-app formula always described.
 
-The original code is unchanged in [`source-code/server`](source-code/server) for reference.
+The original code is unchanged in [`source-code/server`](source-code/server) for reference. The website explains the same differences on its [About page](https://locationscore.aden.website/about#cloud-edition):
+
+<img src="docs/screenshots/cloud-edition.jpg" alt="The About page's 'Cloud edition vs. the BSc submission' section on the live site" width="620">
 
 ## Run it yourself
 
