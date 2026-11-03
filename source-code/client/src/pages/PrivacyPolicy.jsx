@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import './PrivacyPolicy.css';
 
 const PrivacyPolicy = () => {
@@ -68,7 +68,7 @@ const PrivacyPolicy = () => {
           <p>
             If you have any questions about this privacy policy or our privacy practices, please contact us at:
             <br />
-            Email: privacy@your-domain.com
+            <a href="https://github.com/Arbzy1/location-score-analyzer/issues" target="_blank" rel="noopener noreferrer">github.com/Arbzy1/location-score-analyzer/issues</a>
           </p>
         </section>
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapView.css';
@@ -9,18 +9,13 @@ import { API_URL } from '../../utils/api';
 // Set Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations = [], savedPostcodes = [], recommendations = [] }) => {
+export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations = [], savedPostcodes = [] }) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const recommendationMarkersRef = useRef([]);  // Separate ref for recommendation markers
   const savedLocationMarkersRef = useRef([]);  // Initialize as empty array
   const amenityMarkersRef = useRef([]); // New ref for amenity markers
-  const markersRef = useRef({
-    saved: [],
-    recommendations: []
-  });
   const savedPostcodeMarkers = useRef([]);
-  const travelPreferenceMarkers = useRef([]); // New ref for travel preference markers
 
   const [lng] = useState(-3.17909);
   const [lat] = useState(51.481583);
@@ -42,8 +37,6 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
 
   // Add a new state for bus data loading
   const [busRoutesData, setBusRoutesData] = useState(null);
-  const [busDataLoading, setBusDataLoading] = useState(false);
-  const [busDataLoaded, setBusDataLoaded] = useState(false);
 
   // Add this to your component to store consistent colors for route numbers
   const routeColorCache = useRef({});
@@ -82,6 +75,21 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
     if (amenityMarkersRef.current) {
       amenityMarkersRef.current.forEach(marker => marker.remove());
       amenityMarkersRef.current = [];
+    }
+  };
+
+  // Nearest school, hospital and supermarket to a saved postcode, drawn on the map
+  const showAmenitiesForPostcode = async (postcode, coords) => {
+    try {
+      const amenities = await getPostcodeAmenities(postcode);
+      if (amenities && Object.keys(amenities).length > 0) {
+        addAmenityMarkers(amenities, coords);
+      } else {
+        alert("No amenity data available for this location");
+      }
+    } catch (error) {
+      console.error("Error fetching amenities:", error);
+      alert("Failed to fetch amenities for this location");
     }
   };
 
@@ -506,10 +514,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
           map.current.setLayoutProperty('transit-station-labels', 'visibility', 'none');
         }
       }
-      
-      // Update the legend
-      updateTransitLegend(isVisible);
-      
+
     } catch (error) {
       console.error('Error toggling transit layers:', error);
       console.error('Error details:', error.message);
@@ -1664,7 +1669,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
 
           if (showAmenitiesBtn) {
             showAmenitiesBtn.addEventListener('click', () => {
-              showAmenitiesForPostcode(location.postcode);
+              showAmenitiesForPostcode(location.postcode, { lon: longitude, lat: latitude });
             });
           }
 
@@ -1831,34 +1836,6 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
 
     } catch (error) {
       console.error('Error displaying route:', error);
-    }
-  };
-
-  // Update the handleMarkerClick function
-  const handleMarkerClick = (marker, coords) => {
-    if (!routingMode) {
-      // If not in routing mode, just show the popup
-      marker.togglePopup();
-      return;
-    }
-
-    if (!selectedStartMarker) {
-      setSelectedStartMarker({ marker, coords });
-      marker.getElement().style.border = '3px solid #ff0000';
-      marker.getPopup().remove(); // Close popup after selecting
-    } else if (!selectedEndMarker) {
-      setSelectedEndMarker({ marker, coords });
-      marker.getElement().style.border = '3px solid #00ff00';
-      
-      // Get directions between the points
-      displayRoute(
-        [selectedStartMarker.coords.lat, selectedStartMarker.coords.lon],
-        [coords.lat, coords.lon]
-      ).catch(error => {
-        console.error('Error getting directions:', error);
-        clearRoute();
-      });
-      marker.getPopup().remove(); // Close popup after selecting
     }
   };
 

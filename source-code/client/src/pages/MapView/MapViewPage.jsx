@@ -18,10 +18,7 @@ function MapViewPage() {
         console.log("📥 MapViewPage: Found stored results:", parsedResults);
         setLocations(parsedResults);
         setHasSearched(true);
-        
-        if (parsedResults.length > 0 && parsedResults[0].area_name) {
-          setCity(parsedResults[0].area_name);
-        }
+        setCity(sessionStorage.getItem("searchCity") || "Cardiff, UK");
       } catch (error) {
         console.error("❌ MapViewPage: Error parsing stored results:", error);
       }
@@ -34,11 +31,12 @@ function MapViewPage() {
     console.log("🔍 MapViewPage: Received search results:", results);
     setLocations(results);
     setHasSearched(true);
-    
-    if (results && results.length > 0 && results[0].area_name) {
-      console.log("📍 MapViewPage: Updating city to:", results[0].area_name);
-      setCity(results[0].area_name);
-    }
+  };
+
+  // Keep the searched city (not the top result's neighbourhood) for the heading and map
+  const handleSearchStart = (query) => {
+    setCity(query);
+    sessionStorage.setItem("searchCity", query);
   };
 
   console.log("🎨 MapViewPage: Rendering with state:", { city, locationsCount: locations.length, hasSearched });
@@ -49,7 +47,7 @@ function MapViewPage() {
         Search for a city to view recommended locations based on proximity to amenities.
       </p>
       
-      <SearchBar onSearchResults={handleSearchResults} />
+      <SearchBar onSearchResults={handleSearchResults} onSearchStart={handleSearchStart} />
       
       {hasSearched && locations.length === 0 ? (
         <div className="no-results">
@@ -63,7 +61,7 @@ function MapViewPage() {
             </div>
           )}
           
-          <MapView city={city} />
+          <MapView city={city} locations={locations} />
           
           {locations.length > 0 && (
             <div className="results-list">

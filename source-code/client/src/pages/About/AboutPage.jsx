@@ -45,7 +45,7 @@ function AboutPage() {
         <h2>Cloud edition vs. the BSc submission</h2>
         <p>
           The version on this website is <strong>not exactly what was submitted for my BSc</strong>.
-          The original depended on several services I ran on my own machines, which can't be
+          The original depended on several services I ran on my own machines, which can&apos;t be
           hosted for free in the cloud, so they have been replaced:
         </p>
         <table className="comparison-table">
