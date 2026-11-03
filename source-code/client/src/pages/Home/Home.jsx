@@ -4,16 +4,8 @@ import axios from 'axios';
 import './Home.css';
 import { MapView } from '../../components/Map/MapView';
 import { TravelBehaviourForm } from '../../components/TravelBehaviourForm/TravelBehaviourForm';
-import { auth, db } from "../../firebase";
 import { API_URL } from '../../utils/api';
-import { 
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc,
-  arrayUnion,
-  arrayRemove 
-} from 'firebase/firestore';
+import { loadUserData as fetchUserData, saveUserData } from '../../services/userService';
 import { useAuth } from "../../contexts/AuthContext";
 import { TransportBreakdown } from '../../components/TransportBreakdown/TransportBreakdown';
 
@@ -60,11 +52,10 @@ function Home() {
       
       try {
         console.log('Loading data for user:', currentUser.uid);
-        const userDoc = doc(db, 'users', currentUser.uid);
-        const docSnap = await getDoc(userDoc);
-        
-        if (docSnap.exists()) {
-          const userData = docSnap.data();
+        // The API creates the user's row (with default preferences) on first load
+        const userData = await fetchUserData(currentUser);
+
+        {
           console.log('Loaded user data:', userData);
           setSavedPostcodes(userData.savedPostcodes || []);
           // Load saved travel preferences with default weights if not present
@@ -108,23 +99,6 @@ function Home() {
             // Also update the travelMode state
             setTravelMode(userData.travelPreferences.travelMode || 'auto');
           }
-        } else {
-          console.log('Creating new user document');
-          await setDoc(userDoc, { 
-            savedPostcodes: [],
-            travelPreferences: {
-              locations: [],
-              amenityWeights: {
-                school: 15,
-                hospital: 15,
-                supermarket: 10
-              },
-              travelMode: 'auto',
-              schoolFilter: 'both'
-            },
-            createdAt: new Date().toISOString(),
-            email: currentUser.email
-          });
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -164,7 +138,6 @@ function Home() {
       const { latitude, longitude } = data.result;
       
       console.log('Saving postcode for user:', currentUser.uid);
-      const userDoc = doc(db, 'users', currentUser.uid);
       const newPostcode = {
         id: Date.now().toString(),
         label: locationLabel,
@@ -176,11 +149,11 @@ function Home() {
         timestamp: new Date().toISOString()
       };
 
-      await updateDoc(userDoc, {
-        savedPostcodes: arrayUnion(newPostcode)
+      const saved = await saveUserData(currentUser, {
+        savedPostcodes: [...savedPostcodes, newPostcode]
       });
 
-      setSavedPostcodes(prev => [...prev, newPostcode]);
+      setSavedPostcodes(saved.savedPostcodes);
       setLocationLabel("");
       setPostcode("");
       setLocationType("Home");
@@ -197,43 +170,33 @@ function Home() {
     if (!currentUser) return;
 
     try {
-      const postcodeToRemove = savedPostcodes.find(pc => pc.id === postcodeId);
-      const userDoc = doc(db, 'users', currentUser.uid);
-      
-      await updateDoc(userDoc, {
-        savedPostcodes: arrayRemove(postcodeToRemove)
+      const saved = await saveUserData(currentUser, {
+        savedPostcodes: savedPostcodes.filter(pc => pc.id !== postcodeId)
       });
 
-      setSavedPostcodes(prev => prev.filter(pc => pc.id !== postcodeId));
+      setSavedPostcodes(saved.savedPostcodes);
     } catch (error) {
       console.error('Error removing postcode:', error);
     }
   };
 
-  const handleSearch = async () => {
+  // Preferences can be passed in directly when they were just saved, because the
+  // travelPreferences state isn't updated until the next render.
+  const handleSearch = async (preferencesOverride) => {
+    const preferences = preferencesOverride || travelPreferences;
     if (!selectedCity) {
       setError("Please enter a city name");
       return;
     }
 
     console.log("🔍 Starting search with city:", selectedCity);
-    console.log("📝 Travel preferences:", travelPreferences);
+    console.log("📝 Travel preferences:", preferences);
     
     setIsLoading(true);
     setError(null);
     setHasSearched(true);
 
     try {
-      // First, test the connection to make sure proxy is working
-      try {
-        console.log("🧪 Testing connection to backend...");
-        const testResponse = await axios.get(`${API_URL}/otp-status`, { timeout: 5000 });
-        console.log("✅ Connection test successful:", testResponse.data);
-      } catch (testError) {
-        console.error("❌ Connection test failed:", testError);
-        // Continue with the search anyway
-      }
-
       const url = `${API_URL}/amenities`;
       
       // Fix travel_preferences parameter to ensure it's not sent as 'null' string
@@ -243,8 +206,8 @@ function Home() {
       };
 
       // Only add travel_preferences if they exist
-      if (travelPreferences) {
-        params.travel_preferences = JSON.stringify(travelPreferences);
+      if (preferences) {
+        params.travel_preferences = JSON.stringify(preferences);
       }
       
       console.log("🌐 Making request to:", url);
@@ -252,7 +215,7 @@ function Home() {
       
       const response = await axios.get(url, {
         params: params,
-        timeout: 60000,  // Increase timeout to 60 seconds
+        timeout: 90000,  // First search for a city fetches OpenStreetMap data, which can be slow
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
@@ -322,7 +285,7 @@ function Home() {
           console.log("🔍 DEBUG: Processing preference with cleaned postcode:", cleanedPostcode);
           
           try {
-            const response = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(cleanedPostcode)}`);
+            const response = await fetch(`${API_URL}/postcode/${encodeURIComponent(cleanedPostcode)}`);
             
             if (!response.ok) {
               const errorData = await response.json();
@@ -383,22 +346,15 @@ function Home() {
       // Save preferences to Firebase if user is logged in
       if (currentUser) {
         try {
-          console.log("Saving travel preferences to Firebase for user:", currentUser.uid);
-          console.log("🔍 DEBUG: Types being saved to Firebase:", validGeocoded.map(loc => ({ 
-            postcode: loc.postcode, 
-            type: loc.type, 
-            frequency: loc.frequency 
-          })));
-          
-          const userDoc = doc(db, 'users', currentUser.uid);
-          await updateDoc(userDoc, {
+          console.log("Saving travel preferences for user:", currentUser.uid);
+          await saveUserData(currentUser, {
             travelPreferences: completePreferences
           });
           console.log("Travel preferences saved successfully");
           
           // Trigger new search if city is already selected
           if (selectedCity) {
-            handleSearch();
+            handleSearch(completePreferences);
           }
         } catch (error) {
           console.error("Error saving travel preferences:", error);
@@ -408,7 +364,7 @@ function Home() {
         console.log("No user logged in, preferences will not be persisted");
         // Still trigger search even if not logged in
         if (selectedCity) {
-          handleSearch();
+          handleSearch(completePreferences);
         }
       }
     } catch (error) {
@@ -541,7 +497,7 @@ function Home() {
             onChange={(e) => setSelectedCity(e.target.value)}
             className="city-input"
           />
-          <button onClick={handleSearch} className="search-button">
+          <button onClick={() => handleSearch()} className="search-button">
             Search
           </button>
         </div>
