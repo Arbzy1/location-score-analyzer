@@ -4,6 +4,11 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-20",
 
+  // Served at https://locationscore.aden.website (Cloudflare creates the DNS record and
+  // certificate). The workers.dev address stays on as a fallback.
+  "routes": [{ "pattern": "locationscore.aden.website", "custom_domain": true }],
+  "workers_dev": true,
+
   // The React app (built into ../client/dist) is served from the same Worker,
   // so the browser talks to /api on the same origin - no CORS, no hard-coded IPs.
   "assets": {
@@ -17,7 +22,7 @@
     // Firebase is only used for Google sign-in; user data lives in Neon.
     "FIREBASE_PROJECT_ID": "streetnetworkanalysis",
     // Sent to Nominatim/Overpass as required by their usage policies.
-    "CONTACT": "https://github.com/"
+    "CONTACT": "https://github.com/Arbzy1/location-score-analyzer"
   },
 
   // Secrets (set with `npx wrangler secret put <NAME>`, never committed):

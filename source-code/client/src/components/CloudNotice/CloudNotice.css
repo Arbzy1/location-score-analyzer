@@ -1,0 +1,41 @@
+.cloud-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  padding: 0.55rem 1rem;
+  background: #eef4fc;
+  border-bottom: 1px solid #d6e4f5;
+  color: #2c3e50;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Sits at the top of <main>, which is already pushed below the fixed navbar */
+.main-content > .cloud-notice {
+  margin: -2rem 0 1.5rem;
+}
+
+.cloud-notice-badge {
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: #4a90e2;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.cloud-notice-link {
+  color: #2b6cb0;
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.cloud-notice-link:hover {
+  color: #1a4e8a;
+}

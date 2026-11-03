@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Navbar from '../Navbar/Navbar';
 import Footer from '../Footer/Footer';
+import CloudNotice from '../CloudNotice/CloudNotice';
 import './Layout.css';
 
 function Layout() {
@@ -12,6 +13,7 @@ function Layout() {
     <div className="app-container">
       <Navbar user={user} onLogin={signIn} onLogout={logout} />
       <main className="main-content">
+        <CloudNotice />
         <Outlet />
       </main>
       <Footer />
