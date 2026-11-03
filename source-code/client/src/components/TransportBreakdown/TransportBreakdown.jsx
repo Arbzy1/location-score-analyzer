@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './TransportBreakdown.css';
 
 export const TransportBreakdown = ({ transport_modes, travel_details }) => {
