@@ -673,8 +673,8 @@ function Home() {
                       <h4>Amenities (40%)</h4>
                       <ul>
                         <li>Schools (15%): Based on distance to nearest school</li>
-                        <li>Hospitals (4%): Based on distance to nearest hospital</li>
-                        <li>Supermarkets (21%): Based on distance to nearest supermarket</li>
+                        <li>Hospitals (15%): Based on distance to nearest hospital</li>
+                        <li>Supermarkets (10%): Based on distance to nearest supermarket</li>
                       </ul>
                     </div>
                     <div className="score-component">
@@ -687,7 +687,7 @@ function Home() {
                     <div className="score-component">
                       <h4>Travel Behavior (40%)</h4>
                       <ul>
-                        <li>Calculated using real driving times from OSRM</li>
+                        <li>Real travel times: openrouteservice for car, bike and foot, Cardiff Bus timetables for bus</li>
                         <li>Weighted by visit frequency (more frequent trips have higher impact)</li>
                         <li>Target: Keep weekly travel time under 600 minutes (10 hours)</li>
                         <li>Score decreases as weekly travel time approaches or exceeds target</li>
@@ -904,7 +904,7 @@ function Home() {
                               <p>Our location recommendations are based on the following methodology:</p>
                               <ol>
                                 <li>We generate multiple random locations within the requested city area</li>
-                                <li>For each location, we calculate travel times to your frequent destinations using OpenStreetMap Routing Service and OpenTripPlanner</li>
+                                <li>For each location, we calculate travel times to your frequent destinations using openrouteservice (car, bike and foot) and Cardiff Bus timetables (bus)</li>
                                 <li>We find nearby amenities using OpenStreetMap data</li>
                                 <li>We analyze public transit accessibility using GTFS (transit schedule) data</li>
                                 <li>We calculate a comprehensive score based on all these factors</li>
@@ -999,6 +999,7 @@ function Home() {
               console.log("🖱️ Home: Map exploration button clicked");
               // Store current results before navigating
               sessionStorage.setItem("searchResults", JSON.stringify(searchResults));
+              sessionStorage.setItem("searchCity", selectedCity);
               navigate("/map");
             }} 
             className="cta-button"

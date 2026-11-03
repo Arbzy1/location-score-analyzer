@@ -68,7 +68,7 @@ function TermsOfService() {
         <p>
           If you have any questions about these Terms of Service, please contact us at:
           <br />
-          Email: support@locationscorer.com
+          <a href="https://github.com/Arbzy1/location-score-analyzer/issues" target="_blank" rel="noopener noreferrer">github.com/Arbzy1/location-score-analyzer/issues</a>
         </p>
       </div>
     </div>
