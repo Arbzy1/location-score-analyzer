@@ -5,9 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    // No proxy setup - connecting directly to the server
-  },
-  define: {
-    // Define any global constants here if needed
+    // During `npm run dev`, send API calls to `wrangler dev` in ../worker
+    proxy: {
+      '/api': 'http://localhost:8787'
+    }
   }
 })

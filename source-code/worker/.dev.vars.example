@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local development (never commit .dev.vars)
+DATABASE_URL=postgresql://user:password@ep-example-123456.eu-west-2.aws.neon.tech/neondb?sslmode=require
+ORS_API_KEY=your-openrouteservice-key
