@@ -1,15 +1,13 @@
-import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import React, { useEffect } from 'react';
 import './PrivacyPolicy.css';
 
 const PrivacyPolicy = () => {
+  useEffect(() => {
+    document.title = 'Privacy Policy - Location Score Analyzer';
+  }, []);
+
   return (
     <div className="privacy-policy-container">
-      <Helmet>
-        <title>Privacy Policy - Location Score Analyzer</title>
-        <meta name="description" content="Privacy policy for Location Score Analyzer - Learn how we protect your data and privacy." />
-        <meta name="robots" content="noindex, follow" />
-      </Helmet>
 
       <div className="privacy-policy-content">
         <h1>Privacy Policy</h1>

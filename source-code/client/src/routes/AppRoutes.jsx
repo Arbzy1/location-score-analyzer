@@ -5,6 +5,7 @@ import AboutPage from "../pages/About/AboutPage";
 import MapViewPage from "../pages/MapView/MapViewPage";
 import NotFoundPage from "../pages/NotFound/NotFoundPage";
 import TermsOfService from "../pages/TermsOfService";
+import PrivacyPolicy from "../pages/PrivacyPolicy";
 
 function AppRoutes() {
   console.log("🛣️ AppRoutes: Setting up routes");
@@ -16,6 +17,7 @@ function AppRoutes() {
         <Route path="map" element={<MapViewPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="terms" element={<TermsOfService />} />
+        <Route path="privacy" element={<PrivacyPolicy />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

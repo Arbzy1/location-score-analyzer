@@ -1,5 +1,7 @@
 # Cloud Deployment (Cloudflare + Neon)
 
+Live at **https://locationscore.aden.website**.
+
 The app now runs entirely in the cloud — no home servers, no OpenTripPlanner, no
 self-hosted OpenRouteService, no ngrok.
 
@@ -40,8 +42,9 @@ Sign up at <https://account.heigit.org/signup> (HeiGIT runs openrouteservice) an
 
 ### 3. Firebase sign-in domain
 Firebase console → project **streetnetworkanalysis** → Authentication → Settings →
-**Authorized domains** → add `location-score-analyzer.<your-subdomain>.workers.dev`
-(and any custom domain). Without this, "Sign in with Google" fails on the live site.
+**Authorized domains** → add `locationscore.aden.website` and
+`location-score-analyzer.<your-subdomain>.workers.dev`. Without this, "Sign in with Google"
+fails on the live site.
 
 ### 4. Mapbox token
 The map needs a public Mapbox token at build time. Copy `source-code/client/.env.example`
@@ -56,7 +59,9 @@ npx wrangler secret put DATABASE_URL   # paste the Neon connection string
 npx wrangler secret put ORS_API_KEY    # paste the ORS key
 npm run deploy                         # builds the React app, then deploys the Worker
 ```
-`wrangler deploy` prints the live URL. Check `https://<url>/api/health` — it should
+`wrangler deploy` prints the live URLs. The custom domain `locationscore.aden.website` is set in
+`wrangler.jsonc` (`routes`); Cloudflare creates its DNS record and certificate on deploy.
+To use a different domain, change that pattern to a hostname on a zone in your Cloudflare account. Check `https://<url>/api/health` — it should
 report `"database": true` and `"routing": "openrouteservice"`.
 
 ## Local development

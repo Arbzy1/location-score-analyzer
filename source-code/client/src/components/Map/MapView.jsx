@@ -55,7 +55,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
 
   // Function to clear amenity markers
   const clearAmenityMarkers = () => {
-    if (map.current && map.current.loaded()) {
+    if (map.current && map.current.isStyleLoaded()) {
       // Remove all tracked layers
       Object.keys(mapFeaturesRef.current.layers).forEach(layerId => {
         if (map.current.getLayer(layerId)) {
@@ -97,7 +97,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
     }
     
     // Ensure map is loaded before continuing
-    if (!map.current || !map.current.loaded()) {
+    if (!map.current || !map.current.isStyleLoaded()) {
       console.log("Map not fully loaded yet, waiting...");
       setTimeout(() => addAmenityMarkers(amenities, mainLocationCoords), 100);
       return;
@@ -379,8 +379,8 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
     setLayersVisible(prev => {
       const newState = { ...prev, [layerType]: !prev[layerType] };
       
-      // Apply changes to the map
-      if (map.current && map.current.loaded()) {
+      // Layers only need the style loaded, not every tile, so toggles work while the map is busy
+      if (map.current && map.current.isStyleLoaded()) {
         switch (layerType) {
           case 'transit':
             applyTransitLayerVisibility(!prev.transit);
@@ -405,7 +405,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
   
   // Function to apply transit layer visibility
   const applyTransitLayerVisibility = (isVisible) => {
-    if (!map.current || !map.current.loaded()) return;
+    if (!map.current || !map.current.isStyleLoaded()) return;
     
     try {
       console.log(`Transit layer toggle: ${isVisible ? 'ON' : 'OFF'}`);
@@ -519,7 +519,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
   
   // Function to apply traffic layer visibility
   const applyTrafficLayerVisibility = (isVisible) => {
-    if (!map.current || !map.current.loaded()) return;
+    if (!map.current || !map.current.isStyleLoaded()) return;
     
     try {
       if (isVisible) {
@@ -570,7 +570,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
   
   // Function to apply 3D buildings visibility
   const applyBuildings3DVisibility = (isVisible) => {
-    if (!map.current || !map.current.loaded()) return;
+    if (!map.current || !map.current.isStyleLoaded()) return;
     
     try {
       if (isVisible) {
@@ -642,7 +642,7 @@ export const MapView = ({ city = 'Cardiff, UK', locations = [], savedLocations =
 
   // Update the displayBusRoutes function with proper color handling and zoom-dependent visibility
   const displayBusRoutes = (data) => {
-    if (!map.current || !map.current.loaded() || !data) {
+    if (!map.current || !map.current.isStyleLoaded() || !data) {
         console.warn("Map or data not ready for bus routes display");
         return;
     }
