@@ -1,14 +1,5 @@
-# Allow all crawlers
 User-agent: *
 Allow: /
-
-# Sitemap location
-Sitemap: https://your-domain.com/sitemap.xml
-
-# Disallow admin and private areas
-Disallow: /admin/
-Disallow: /private/
 Disallow: /api/
 
-# Crawl delay
-Crawl-delay: 10 
+Sitemap: https://locationscore.aden.website/sitemap.xml
